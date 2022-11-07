@@ -1,7 +1,5 @@
 
-<<<<<<< HEAD
 .DS_Store
-=======
 *.bak
 *.ini
->>>>>>> 2dd0d7d080fa708443d5b265e822a5942968f499
+__pycache__/
