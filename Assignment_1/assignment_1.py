@@ -3,13 +3,13 @@ import numpy as np
 
 
 def brier_score(df, correctlabels):
-
-    obs_vector = []
-
-    for label in correctlabels:
-        index = df[label]
-        print(index)
-
+    for id in df.iterrows():
+        for col in correctlabels:
+            for p in id:
+                obs = id[col]
+                brier_score = (p-obs)**2
+    
+    return brier_score
 
 
 
