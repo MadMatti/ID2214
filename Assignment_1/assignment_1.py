@@ -34,12 +34,24 @@ import numpy as np
 
 def auc(df, correctlabels):
     thresholds = list(np.array(list(range(0, 105, 1)))/100)
+    auc_score = 0
+    threshold_values = []
     roc_point = []
+    dummie = pd.get_dummies(correctlabels)
 
+    for i in range(0, len(df.axes[1])):
+        if i == 0: 
+            df1 = pd.DataFrame({"actual": dummie.iloc[:, i] , "prediction":df.iloc[:, i]})
+        if i != 0:
+            df2 = pd.DataFrame({"actual": dummie.iloc[:, i] , "prediction":df.iloc[:, i]})
+            df1 = pd.concat([df1, df2], ignore_index = True)
+    print('This is the datafram: \n',df1)
+        
     for threshold in thresholds:
-        tp =0; fp=0; fn=0; tn=0
+        tp=0; fp=0; fn=0; tn=0
 
-        for index, instance in df.iterrows():
+        for index, instance in df1.iterrows():
+            # actual = np.sum((instance*dummie.iloc[index]))
             actual = instance["actual"]
             prediction = instance["prediction"]
 
@@ -47,7 +59,7 @@ def auc(df, correctlabels):
                 prediction_class = 1
             else:
                 prediction_class = 0
-            if prediction_class == 1 and actual ==1:
+            if actual == 1 and prediction_class == 1:
                 tp += 1
             elif actual == 1 and prediction_class == 0:
                 fn += 1
@@ -56,23 +68,26 @@ def auc(df, correctlabels):
             elif actual == 0 and prediction_class == 0:
                 tn += 1
 
-            tpr = tp / (tp+fn)
-            fpr = fp / (tn+fp)
-
-            print(tp, fp, fn, tn)
-            roc_point.append([tpr, fpr])
+        # print(tp, fp, fn, tn)
+        tpr = tp / (tp+fn)
+        fpr = fp / (tn+fp)
+        # print(tpr, fpr)
+        roc_point.append([tpr, fpr])
+        # print(roc_point)
+        threshold_values.append(threshold) 
     pivot = pd.DataFrame(roc_point, columns = ["x","y"])
-    pivot["thresholds"] = thresholds
-    auc_score = auc_score(pivot)
+    pivot["threshold"] = threshold_values
+    print(pivot)
+    auc_score = abs(np.trapz(pivot.x, pivot.y))
     return auc_score
 
-def auc_score(pivot):
-    return abs(np.trap(pivot.x, pivot.y))
+# def auc_score(pivot):
+#     return int()
 
 def test():
-    predictions = pd.DataFrame({"A":[0.9,0.9,0.6,0.55],"B":[0.1,0.1,0.4,0.45]})
+    predictions = pd.DataFrame({"A":[0.5,0.5,0.5,0.25,0.25],"B":[0.5,0.25,0.25,0.5,0.25],"C":[0.0,0.25,0.25,0.25,0.5]})
 
-    correctlabels = ["A","B","B","A"]
+    correctlabels = ["B","A","B","B","C"]
 
     print("AUC: {}".format(auc(predictions,correctlabels)))
 test()
