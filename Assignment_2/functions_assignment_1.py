@@ -167,3 +167,67 @@ def accuracy(df, correctlabels):
     accuracy = correct_pred / len(correctlabels)
     return accuracy
 
+def auc_binary(df, correctlabels, c):
+    # Only some modification to the dataframe for better understanding
+    df1 = df.copy()
+    df1.drop(df1.columns.difference([c]), axis=1, inplace=True)
+    df1["actual"] = correctlabels
+    df1.rename({c: 'prediction'}, axis=1, inplace=True)
+    columns_titles = ["actual","prediction"]
+    df1 = df1.reindex(columns=columns_titles)
+
+    thresholds = list(np.array(list(range(0,101,1)))/100)
+    roc_points = []
+
+    for threshold in thresholds:
+
+        tp = tn = fp = fn = 0
+
+        for index, instance in df1.iterrows():
+            actual = instance["actual"] == c
+            prediction = instance["prediction"]
+
+            if prediction >= threshold:
+                prediction_class = True
+            else:
+                prediction_class = False
+
+            if prediction_class and actual:
+                tp += 1
+            elif prediction_class and not actual:
+                fp += 1
+            elif not prediction_class and actual:
+                fn += 1
+            elif not prediction_class and not actual:
+                tn += 1
+
+        tpr = tp / (tp + fn)
+        fpr = fp / (fp + tn)
+        roc_points.append([tpr, fpr])
+
+    pivot = pd.DataFrame(roc_points, columns=['x', 'y'])
+
+    auc = abs(np.trapz(pivot.x, pivot.y))
+
+    return auc
+
+def auc(df,correctlabels):
+    auc = 0
+    for c in df.columns:
+        auc += auc_binary(df, correctlabels, c) / len(correctlabels) * correctlabels.count(c)
+    return auc
+
+def brier_score(df, correctlabels):
+    
+    brier_score = 0
+    n = len(df.index)
+    for i,p in df.iterrows():
+        
+        true_label = correctlabels[i]
+
+        o = np.zeros(len(p))
+        o[df.columns==true_label] = 1
+        
+        brier_score += ((p-o)**2).sum(axis=0)/n
+        
+    return brier_score
