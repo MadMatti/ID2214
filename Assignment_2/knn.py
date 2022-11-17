@@ -59,13 +59,13 @@ class kNN():
         neighbours = sorted_indices[:k]
         k_labels = self.training_labels[neighbours]
 
-        unique, counts =  np.unique(k_labels, return_count = True) 
+        unique, counts =  np.unique(k_labels, return_counts = True) 
         probabilities = dict(zip(unique, counts/k))
         print(probabilities)
 
 
     def predict(self, df, k=5):
-        
+
         self.get_nearest_neighbor_predictions(k)
 
 
