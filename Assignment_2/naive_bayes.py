@@ -27,19 +27,50 @@ class NaiveBayes:
         df1["CLASS"] = df1["CLASS"].astype("category")
         self.labels = list(df1["CLASS"].cat.categories)
         
-        for column in df.columns:
-            if column not in ["CLASS", "ID"]:
-                temp = df1.dropna(axis = 0, how="any", subset = ["CLASS", column])
-                self.feature_class_counts = {column:len(temp["CLASS"])}
-        self.feature_class_value_counts = {c:sum(df["CLASS"]==c) for c in pd.unique(df["CLASS"])}
-        return None
+        dict_count = {}
+        dict_values_count = {}
+
+        for col in df1.columns:
+            if col not in ['CLASS', 'ID']:
+                # df1_tmp = df1.dropna(axis = 0,subset = ['CLASS', col])
+                dict_values_count[col] = df1.groupby(['CLASS', col]).size().to_dict()
+                df1_tmp = df1.dropna(axis = 0,subset = ['CLASS', col])
+                
+                dict_count[col] = df1_tmp.loc[:, 'CLASS'].value_counts().to_dict()
+
+        self.feature_class_value_counts = dict_values_count
+        self.feature_class_counts = dict_count
 
         # For numerical stability calculate the log of a priori probability + log of each conditional probability.
         # 
     def predict(self, df):
         df1 = df.copy()
-        df1 = apply_column_filter(df1)
-        df1 = apply_bins(df1)
+        df1 = apply_column_filter(df1, self.column_filter)
+        df1 = apply_bins(df1, self.binning)
+        df1 = df1.drop(columns = ['CLASS', 'ID'], axis=1)
+
+
+        print(df1)
+        print('self.feature_class_value_counts\n' ,self.feature_class_value_counts,'\n')
+
+
+        print(self.feature_class_counts)
+
+        for columnName, columnData in df1.iteritems():
+        #     # if (columnName, columnData.values) in self.feature_class_value_counts.keys():
+        #     #     print(columnData.values)  
+        #     #     print('This works \n',columnName,self.feature_class_value_counts[columnName].keys())
+        #     for value in columnData:
+        #         print(columnName, value)
+            for key in enumerate(self.feature_class_value_counts.keys()):
+                # print('key',key[1])
+                if key[1] in list(columnName):
+                    num_of_class_labels = self.feature_class_value_counts.get(key[1])
+                    # print('num_of_class_labels', num_of_class_labels)
+                    for tuple, value in num_of_class_labels.items():
+                        print(key[1].upper(),tuple[0],tuple[1], value)
+                        # print(columnData)
+                    break
         return None
 
 def test():
