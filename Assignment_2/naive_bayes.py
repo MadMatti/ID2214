@@ -3,30 +3,30 @@ import pandas as pd
 import time
 from functions_assignment_1 import *
 from platform import python_version
+from IPython.display import display
 
 print(f"Python version: {python_version()}")
 print(f"NumPy version: {np.__version__}")
 print(f"Pandas version: {pd.__version__}")
 class NaiveBayes:
     def __init__(self):
-        column_filter = None
-        binning = None
-        labels = None
-        class_priors = None
-        feature_class_value_counts = None
-        feature_class_counts = None
+        self.column_filter = None
+        self.binning = None
+        self.labels = None
+        self.class_priors = None
+        self.feature_class_value_counts = None
+        self.feature_class_counts = None
     
 
     def fit(self, df, nobins=10, bintype="equal-width"):
         df1 = df.copy()
-        print(df1)
+        # print(df1)
         
-        df, self.column_filter = create_column_filter(df1)
-        df, self.binning = create_bins(df1, nobins, bintype)
-        self.class_priors = {c:sum(df["CLASS"]==c) for c in pd.unique(df["CLASS"])}
+        df1, self.column_filter = create_column_filter(df1)
+        df1, self.binning = create_bins(df1, nobins, bintype)
+        self.class_priors = {c:(sum(df["CLASS"]==c)/len(df1)) for c in pd.unique(df["CLASS"])}
         df1["CLASS"] = df1["CLASS"].astype("category")
         self.labels = list(df1["CLASS"].cat.categories)
-        
         dict_count = {}
         dict_values_count = {}
 
@@ -47,30 +47,39 @@ class NaiveBayes:
         df1 = df.copy()
         df1 = apply_column_filter(df1, self.column_filter)
         df1 = apply_bins(df1, self.binning)
+
+        pd.set_option('display.max_rows', df1.shape[0]+1)
         df1 = df1.drop(columns = ['CLASS', 'ID'], axis=1)
-
-
-        print(df1)
+        # print(df1)
         print('self.feature_class_value_counts\n' ,self.feature_class_value_counts,'\n')
 
 
-        print(self.feature_class_counts)
+        print('self.feature_class_counts',self.feature_class_counts)
+        rel_freq = {}
+        num_feature_value = 3
+        num_feature = df1.shape[1]
+        num_labels = len(self.labels)
+        matrix = np.zeros([num_labels, num_feature_value,num_feature])
 
-        for columnName, columnData in df1.iteritems():
+        for columnName, columnData in df1.items():
         #     # if (columnName, columnData.values) in self.feature_class_value_counts.keys():
         #     #     print(columnData.values)  
         #     #     print('This works \n',columnName,self.feature_class_value_counts[columnName].keys())
         #     for value in columnData:
         #         print(columnName, value)
-            for key in enumerate(self.feature_class_value_counts.keys()):
+            for i, key in enumerate(self.feature_class_value_counts.keys()):
                 # print('key',key[1])
-                if key[1] in list(columnName):
-                    num_of_class_labels = self.feature_class_value_counts.get(key[1])
-                    # print('num_of_class_labels', num_of_class_labels)
-                    for tuple, value in num_of_class_labels.items():
-                        print(key[1].upper(),tuple[0],tuple[1], value)
+                if key in columnName:
+                    combination_to_count = self.feature_class_value_counts.get(key)
+                    # print(key,'num_of_class_labels', combination_to_count)
+                    for tuple, value in combination_to_count.items():
+                        # print(key,i,tuple[1], value)
+                        rel_freq[(tuple[0],tuple[1])] = value/self.feature_class_counts.get(key).get(tuple[0])
+                        # print(rel_freq)
                         # print(columnData)
-                    break
+                        matrix[tuple[0],int(tuple[1]),i] = rel_freq[tuple[0],tuple[1]]
+                        print(matrix)
+                        break
         return None
 
 def test():

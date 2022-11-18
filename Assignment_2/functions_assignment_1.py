@@ -213,6 +213,7 @@ def auc_binary(df, correctlabels, c):
 
 def auc(df,correctlabels):
     auc = 0
+    correctlabels = list(correctlabels)
     for c in df.columns:
         auc += auc_binary(df, correctlabels, c) / len(correctlabels) * correctlabels.count(c)
     return auc

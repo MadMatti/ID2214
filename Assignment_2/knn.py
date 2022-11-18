@@ -17,6 +17,7 @@ import numpy as np
 import pandas as pd
 import time
 from functions_assignment_1 import *
+from IPython.display import display
 
 class kNN():
     def __init__(self):
@@ -38,21 +39,21 @@ class kNN():
         df1, self.one_hot = create_one_hot(df1)
         
         df1["CLASS"] = df1["CLASS"].astype("category")
-        self.training_labels = df1["CLASS"].cat.categories
-        self.labels = list(self.training_labels)
+        self.training_labels = df1["CLASS"]
+        self.labels = list(self.training_labels.cat.categories)
         df1 = df1.drop(axis = 1, labels = ["CLASS", "ID"])
         self.training_data = np.array(df1)
         
         print(df1)
 
-    def distance(x_1, x_2):
+    def get_distance(self, x_1, x_2):
         final_distance  = np.sqrt(np.sum((x_1 - x_2)** 2)) 
         return final_distance
 
     def get_nearest_neighbor_predictions(self, x_test,k):
         distances = np.empty(self.training_data.shape[0])
         for index, point in enumerate(self.training_data):
-            distances[index] = self.distance(x_test, point)
+            distances[index] = self.get_distance(x_test, point)
 
         sorted_indices = distances.argsort()
         
@@ -61,12 +62,34 @@ class kNN():
 
         unique, counts =  np.unique(k_labels, return_counts = True) 
         probabilities = dict(zip(unique, counts/k))
-        print(probabilities)
+        
+        return probabilities
 
 
     def predict(self, df, k=5):
+        df1 = df.copy()
+        df1 = apply_column_filter(df1, self.column_filter)
+        df1 = apply_imputation(df1, self.imputation)
+        df1 = apply_normalization(df1, self.normalization)
+        df1 = apply_one_hot(df1, self.one_hot)
 
-        self.get_nearest_neighbor_predictions(k)
+        to_train = np.unique(self.training_labels)
+        df1 = df1.drop(["CLASS","ID"], axis=1)
+
+        values = df1.select_dtypes(include=np.number).to_numpy()
+        
+        prob_df = pd.DataFrame(data = 0.0, index=range(len(values)), columns=to_train)
+        
+        for i in range(len(values)):
+            row = values[i]
+            probabilities = self.get_nearest_neighbor_predictions(row, k)
+            
+            for prob in probabilities.keys():
+                prob_df.at[i, prob] = probabilities.get(prob) 
+        return prob_df
+
+
+        
 
 
 def test():
