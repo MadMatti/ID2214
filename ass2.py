@@ -299,19 +299,17 @@ class kNN:
         for index, row in enumerate(self.training_data):
             distances[index] = self.euclidean_distance(row, x_test)
 
-        # Add index column to distances array -> 2D array
-        distances = np.column_stack((range(0, len(self.training_data)), distances))
-        # sort the array by the second column (distances)
-        sorted_indicies = distances[:,1].argsort()
-        distances = distances[sorted_indicies]
+        # sort the array and get the sorted indeces
+        sorted_indicies = distances.argsort()
         # take the first k rows (closest neighbors)
-        k_indicies = distances[:k, 0]
+        k_indicies = sorted_indicies[:k]
         # get the labels of the closest neighbors
         k_labels = self.training_labels[k_indicies]
         # calculate the relative class frequencies
         unique, counts = np.unique(k_labels, return_counts=True)
         # calculate the probabilities
-        probabilities = np.column_stack((unique, counts/np.sum(counts)))
+        probabilities = dict(zip(unique, counts/k))
+
 
         return probabilities
 
@@ -335,7 +333,7 @@ class kNN:
             probabilities = self.get_prediction(row, k)
             for prob in probabilities:
                 # set the probability value in the result dataframe
-                result.at[index, int(prob[0])] = prob[1]
+                result.at[index, prob] = probabilities[prob]
 
         return result
 
@@ -381,9 +379,6 @@ def check_result_KNN():
     print("Accuracy on training set (k=1): {0:.4f}".format(accuracy(predictions,train_labels)))
     print("AUC on training set (k=1): {0:.4f}".format(auc(predictions,train_labels)))
     print("Brier score on training set (k=1): {0:.4f}".format(brier_score(predictions,train_labels)))
-
-
-
 
 
 # Define the class NaiveBayes with three functions __init__, fit and predict (after the comments):
@@ -507,6 +502,8 @@ class NaiveBayes:
                         feature_value_count = self.feature_class_value_counts[curr_col][(curr_label, curr_value)]
                         feature_count = self.feature_class_counts[curr_col][curr_label]
                         rel_freq = feature_value_count / feature_count
+                        # Laplace correction
+                        #rel_freq = (feature_value_count + 1)/ (feature_count + len(elements))
                     else:
                         rel_freq = 0
                     
@@ -540,11 +537,6 @@ class NaiveBayes:
 
         result_df = pd.DataFrame(result_matrix.T, columns=self.labels)
         return result_df
-
-
-
-        
-
 
 
 def check_result_bayes():
@@ -587,31 +579,11 @@ def check_result_bayes():
 
 
 
-        
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 if __name__ == "__main__":
     print("KNN")
     check_result_KNN()
-    print("Naive Bayes")
-    check_result_bayes()
+    # print("Naive Bayes")
+    # check_result_bayes()
 
 
 
