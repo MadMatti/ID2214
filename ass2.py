@@ -162,56 +162,115 @@ def brier_score(df, correctlabels):
     return brier_score
 
 # auc
-def auc_binary(df, correctlabels, c):
-    # Only some modification to the dataframe for better understanding
-    df1 = df.copy()
-    df1.drop(df1.columns.difference([c]), axis=1, inplace=True)
-    df1["actual"] = correctlabels
-    df1.rename({c: 'prediction'}, axis=1, inplace=True)
-    columns_titles = ["actual","prediction"]
-    df1 = df1.reindex(columns=columns_titles)
+# def auc_binary(df, correctlabels, c):
+#     # Only some modification to the dataframe for better understanding
+#     df1 = df.copy()
+#     df1.drop(df1.columns.difference([c]), axis=1, inplace=True)
+#     df1["actual"] = correctlabels
+#     df1.rename({c: 'prediction'}, axis=1, inplace=True)
+#     columns_titles = ["actual","prediction"]
+#     df1 = df1.reindex(columns=columns_titles)
 
-    thresholds = list(np.array(list(range(0,101,1)))/100)
-    roc_points = []
+#     thresholds = list(np.array(list(range(0,101,1)))/100)
+#     roc_points = []
 
-    for threshold in thresholds:
+#     for threshold in thresholds:
 
-        tp = tn = fp = fn = 0
+#         tp = tn = fp = fn = 0
 
-        for index, instance in df1.iterrows():
-            actual = instance["actual"] == c
-            prediction = instance["prediction"]
+#         for index, instance in df1.iterrows():
+#             actual = instance["actual"] == c
+#             prediction = instance["prediction"]
 
-            if prediction >= threshold:
-                prediction_class = True
-            else:
-                prediction_class = False
+#             if prediction >= threshold:
+#                 prediction_class = True
+#             else:
+#                 prediction_class = False
 
-            if prediction_class and actual:
-                tp += 1
-            elif prediction_class and not actual:
-                fp += 1
-            elif not prediction_class and actual:
-                fn += 1
-            elif not prediction_class and not actual:
-                tn += 1
+#             if prediction_class and actual:
+#                 tp += 1
+#             elif prediction_class and not actual:
+#                 fp += 1
+#             elif not prediction_class and actual:
+#                 fn += 1
+#             elif not prediction_class and not actual:
+#                 tn += 1
 
-        tpr = tp / (tp + fn)
-        fpr = fp / (fp + tn)
-        roc_points.append([tpr, fpr])
+#         tpr = tp / (tp + fn)
+#         fpr = fp / (fp + tn)
 
-    pivot = pd.DataFrame(roc_points, columns=['x', 'y'])
+#         roc_points.append([tpr, fpr])
 
-    auc = abs(np.trapz(pivot.x, pivot.y))
+#     pivot = pd.DataFrame(roc_points, columns=['x', 'y'])
 
-    return auc
+#     auc = abs(np.trapz(pivot.x, pivot.y))
 
-def auc(df,correctlabels):
-    auc = 0
-    for c in df.columns:
-        auc += auc_binary(df, correctlabels, c) / len(correctlabels) * list(correctlabels).count(c)
-    return auc
+#     return auc
 
+# def auc(df,correctlabels):
+#     auc = 0
+#     for c in df.columns:
+#         auc += auc_binary(df, correctlabels, c) / len(correctlabels) * list(correctlabels).count(c)
+#     return auc
+
+def auc_binary(predictions, correctlabels, threshold, c):
+    # array with true for correct labels for class c (by row index)
+    correctlabels_class = np.array(correctlabels)==predictions.columns[c]
+    # array with predictions for all instances that should be classified class c
+    predictions_class = predictions[predictions.columns[c]]
+    # array with true for all correctly predicted labels according to threshold
+    predicted_labels = predictions_class[correctlabels_class] >= threshold
+    pos = sum(predicted_labels) # number of correctly predicted labels
+    # tp / (tp + fn)
+    tpr = pos / sum(correctlabels_class)
+
+    # same reasoning for negative class
+    not_correctlabels_class = np.array(correctlabels)!=predictions.columns[c]
+    predictions_class = predictions[ predictions.columns[c] ]
+    predicted_labels = predictions_class[not_correctlabels_class] >= threshold
+    neg = sum(predicted_labels)
+    # fpr = fp / (fp + tn)
+    fpr = neg / sum(not_correctlabels_class)
+    
+    return tpr, fpr
+
+
+def auc(predictions, correctlabels):
+    thresholds = np.unique(predictions)
+    AUC_d = {}
+    
+    # iterate over all classes and calculate the area under the ROC(tpr/fpr) curve (AUC)
+    for (index,c) in enumerate(np.unique(correctlabels)):
+        roc_points = [auc_binary(predictions, correctlabels, th, index) for th in reversed(thresholds)]
+                    
+        # calculate AUC as area under the curve
+        AUC = 0
+        tpr_last = 0
+        fpr_last = 0
+        
+        # iterate over all thresholds
+        for r in roc_points:
+            tpr, fpr = r
+            # Add area under triangle        
+            if tpr > tpr_last and fpr > fpr_last:
+                AUC += (fpr-fpr_last)*tpr_last + (fpr-fpr_last)*(tpr-tpr_last) / 2
+            # Add area under rectangle            
+            elif fpr > fpr_last:
+                AUC += (fpr-fpr_last)*tpr
+            # update point coordinates (tpr, fpr) of curve
+            tpr_last = tpr
+            fpr_last = fpr
+       
+        AUC_d[c] = AUC
+        
+    # take the weighted average for all classes
+    AUC_total = 0
+    for (cName,auc) in AUC_d.items():
+        number_of_labels = np.sum(np.array(correctlabels) == cName)
+        weight = number_of_labels / len(correctlabels)
+        AUC_total += weight * auc
+        
+    return AUC_total
 
 
 # Define the class kNN with three functions __init__, fit and predict (after the comments):
@@ -337,11 +396,6 @@ class kNN:
 
         return result
 
-''' COMMENT:
-    I get a strange result for the AUC score when having k = 1.
-    All the result are correct except for that single one. I couldn't figure out what the problem was since the auc function is returning the correct
-    value for all the other values of k and with k = 1 the accuracy and the brier score are correct as well'''
-
 
 # test code
 def check_result_KNN():
@@ -379,6 +433,7 @@ def check_result_KNN():
     print("Accuracy on training set (k=1): {0:.4f}".format(accuracy(predictions,train_labels)))
     print("AUC on training set (k=1): {0:.4f}".format(auc(predictions,train_labels)))
     print("Brier score on training set (k=1): {0:.4f}".format(brier_score(predictions,train_labels)))
+
 
 
 # Define the class NaiveBayes with three functions __init__, fit and predict (after the comments):
@@ -466,6 +521,7 @@ class NaiveBayes:
         dict_count = {}
         dict_values_count = {}
 
+        # populate the dictionaries (hint 5 and 6)
         for col in df1.columns:
             if col not in ['CLASS', 'ID']:
                 dict_values_count[col] = df1.groupby(['CLASS', col]).size().to_dict()
@@ -490,26 +546,24 @@ class NaiveBayes:
         # create a matrix with a coefficeint that is the relative frequency (hint 2)
         for col in range(num_columns):
             curr_col = df1.columns[col]
-            elements = list(set(df1[curr_col]))
             
             for label in range(num_labels):
                 curr_label = self.labels[label]
 
                 for row in range(num_rows):
                     curr_value = df1.iloc[row, col]
-                    # search for this value and schedule in the dictionary
+                    # if the tuple (label, values) is in the dictionary, we can calculate the relative frequency
                     if (curr_label, curr_value) in self.feature_class_value_counts[curr_col].keys():
                         feature_value_count = self.feature_class_value_counts[curr_col][(curr_label, curr_value)]
                         feature_count = self.feature_class_counts[curr_col][curr_label]
                         rel_freq = feature_value_count / feature_count
-                        # Laplace correction
-                        #rel_freq = (feature_value_count + 1)/ (feature_count + len(elements))
                     else:
                         rel_freq = 0
                     
                     matrix[label, row, col] = rel_freq
         
-        # we multiply the values of the matrix to obrain the numerator of the bayes theorem
+        # hint 3 
+        # we multiply the values of the matrix to obtain the numerator of the bayes theorem
         # the result will give us for a tuple (col, row), the relative freq given the class
         non_norm_matrix = matrix.prod(axis=2)
         # store all the classes in a np.array
@@ -528,7 +582,7 @@ class NaiveBayes:
         normalizing_matrix_zero = normalizing_matrix==0
         normalizing_matrix += normalizing_matrix_zero.astype('float')
 
-        # normalize to get the final matrix
+        # normalize to get the final matrix (hint 4)
         result_matrix = non_norm_matrix / normalizing_matrix
         # substitute the values which were zero with the class priors
         # we add them since adding is equal to replacing if the original value was zero
@@ -537,6 +591,7 @@ class NaiveBayes:
 
         result_df = pd.DataFrame(result_matrix.T, columns=self.labels)
         return result_df
+
 
 
 def check_result_bayes():
@@ -582,8 +637,8 @@ def check_result_bayes():
 if __name__ == "__main__":
     print("KNN")
     check_result_KNN()
-    # print("Naive Bayes")
-    # check_result_bayes()
+    print("Naive Bayes")
+    check_result_bayes()
 
 
 
