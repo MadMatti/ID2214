@@ -8,19 +8,27 @@ from sklearn.tree import DecisionTreeClassifier
 
 # column filter
 def create_column_filter(df):
+    
     df1 = df.copy()
-    column_filter = ['CLASS', 'ID']
-    for col in df.columns:
-        if col not in ['CLASS', 'ID']:
-            if len(df[col].dropna().unique()) > 1:
-                column_filter.append(col)
-    df1 = df1[column_filter]
+    df1.dropna(how='all', axis=1, inplace=True) # drop columns full of NaN's
+    column_filter = ['CLASS']
+
+    for column in df1:
+        values = df1[column]
+        unique_values = np.unique(values[~pd.isnull(values)])
+        if column not in ['CLASS', 'ID']: 
+            if len(unique_values) < 2:
+                df1.drop(column, axis=1, inplace=True)
+    column_filter = list(df1.columns.values)
+    
     return df1, column_filter
 
 def apply_column_filter(df, column_filter):
     df1 = df.copy()
-    df1 = df[column_filter]
-    return df1
+    for column in df1:
+        if column not in column_filter:
+            df1.drop(column, axis=1, inplace=True)
+    return df1    
 
 # normalization
 def create_normalization(df,normalizationtype="minmax"):
@@ -233,7 +241,53 @@ class RandomForest:
         df1, self.one_hot = create_one_hot(df1)
         self.labels = df1['CLASS'].astype('category').cat.categories.tolist()
         
-        trees = 0
-        self.model = trees
-    
+        features = df1.columns.difference(['CLASS', 'ID'])
+        num_features = len(features)
         
+        dt = DecisionTreeClassifier()
+        
+        Y = df1['CLASS'].values
+        X = df1[df1.columns.difference(['CLASS', 'ID'])]
+        
+        self.model = dt.fit(X,Y)
+        
+    def predict(self,df):
+        
+        df1 = df.copy()
+              
+        df1 = apply_column_filter(df1, self.column_filter)
+        df1 = apply_imputation(df1, self.imputation)
+        df1 = apply_one_hot(df1, self.one_hot)
+        
+        
+        x = df1[df1.columns.difference(['CLASS', 'ID'])]
+        
+        predictions = pd.DataFrame(self.model.predict_proba(x), columns=self.labels)
+        
+        return predictions
+          
+# Test your code (leave this part unchanged, except for if auc is undefined)
+def test():
+    
+    train_df = pd.read_csv("tic-tac-toe_train.csv")
+    
+    test_df = pd.read_csv("tic-tac-toe_test.csv")
+    
+    rf = RandomForest()
+    
+    t0 = time.perf_counter()
+    rf.fit(train_df)
+    print("Training time: {:.2f} s.".format(time.perf_counter()-t0))
+    
+    test_labels = test_df["CLASS"]
+    
+    t0 = time.perf_counter()
+    predictions = rf.predict(test_df)
+    
+    print("Testing time: {:.2f} s.".format(time.perf_counter()-t0))
+    
+    print("Accuracy: {:.4f}".format(accuracy(predictions,test_labels)))
+    print("AUC: {:.4f}".format(auc(predictions,test_labels))) # Comment this out if not implemented in assignment 1
+    print("Brier score: {:.4f}".format(brier_score(predictions,test_labels))) # Comment this out if not implemented in assignment 1
+
+test()
