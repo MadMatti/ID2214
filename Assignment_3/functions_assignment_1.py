@@ -214,7 +214,7 @@ def auc(predictions, correctlabels):
             # update point coordinates (tpr, fpr) of curve
             tpr_last = tpr
             fpr_last = fpr
-
+            
         AUC_d[c] = AUC
         
     # take the weighted average for all classes
@@ -240,4 +240,3 @@ def brier_score(df, correctlabels):
         brier_score += ((p-o)**2).sum(axis=0)/n
         
     return brier_score
-
