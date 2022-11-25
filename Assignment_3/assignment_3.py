@@ -27,19 +27,42 @@ class RandomForest:
         df1["CLASS"] = df1["CLASS"].astype("category")
         self.labels = list(df1["CLASS"].cat.categories)
 
+        models= []
 
-        df1 = df.copy()
+        display(df1)
         y = df1["CLASS"].to_numpy()
+        # print(y)
         df1 = df1.drop(labels = "CLASS", axis = 1,)
         X = df1.to_numpy()
+        # print(np.shape(X))
 
-        cls = DecisionTreeClassifier(max_features="log2")
+        random_state=0 
+        for i in range(no_trees):
+            # boot_sample = df1.sample(frac=1, replace = True, axis = 0, random_state=random_state+1)
+            # display(boot_sample)
+            # y = boot_sample["CLASS"].to_numpy()
+            # X = boot_sample.drop(labels = "CLASS", axis = 1).to_numpy()            
+            boot_ids = df1.sample(df1.shape[0], replace=True, random_state=random_state+i).index
+            tree = DecisionTreeClassifier(max_features="log2")
+            boot_X=X[boot_ids]
+            boot_y=y[boot_ids]
+            tree.fit(boot_X, boot_y)
+            models.append(tree)
 
-        cls.fit()
+        self.model = models
+    
+    def predict(self, df):
+        df1 = df.copy()
+        df1 = df1.drop(lables=["CLASS", "ID"])
+        df1=apply_column_filter(df1)
+        df1=apply_imputation(df1)
+        df1=apply_one_hot(df1)
 
+        for tree in self.models:
+            probability = tree.predicy_proba(df1.to_numpy())
+        
 
-        ids = df.sample(df.shape[0], replace=True).index
-        self.model = None
+        print(self.labels)
 
 
 def testRanddomForest_1():
