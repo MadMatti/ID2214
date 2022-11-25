@@ -295,7 +295,6 @@ class RandomForest:
         self.one_hot = None
         self.labels = None
         self.model = None
-        self.training_labels = None
 
     def fit(self, dt, no_trees=100):
         df1 = dt.copy()
@@ -309,10 +308,10 @@ class RandomForest:
                 
         # Hint 3: Generate trees from bootstrap replicas of the data
         for i in range(no_trees):
-            row_nums=np.random.choice(len(features),len(features), replace=True)
-            data = features[row_nums]
+            row_num=np.random.choice(len(features),len(features), replace=True)
+            data = features[row_num]
             # get the labels for the fit of the model
-            labels=[df1['CLASS'].astype("category")[i] for i in row_nums]
+            labels=[df1['CLASS'].astype("category")[i] for i in row_num]
             tree = DecisionTreeClassifier(max_features='log2')
             # fit the model with data and labels
             tree.fit(data,labels)
@@ -373,6 +372,272 @@ def check_1():
 
 
 
+# Define a revised version of the class RandomForest with the same input and output as described in part 1 above,
+# where the predict function is able to handle the case where the individual trees are trained on bootstrap samples
+# that do not include all class labels in the original training set. This leads to that the class probabilities output
+# by the individual trees in the forest do not refer to the same set of class labels.
+#
+# Hint 1: The categories obtained with <pandas series>.cat.categories are sorted in the same way as the class labels
+#         of a DecisionTreeClassifier; the latter are obtained by <DecisionTreeClassifier>.classes_ 
+#         The problem is that classes_ may not include all possible labels, and hence the individual predictions 
+#         obtained by <DecisionTreeClassifier>.predict_proba may be of different length or even if they are of the same
+#         length do not necessarily refer to the same class labels. You may assume that each class label that is not included
+#         in a bootstrap sample should be assigned zero probability by the tree generated from the bootstrap sample. 
+#
+# Hint 2: Create a mapping from the complete (and sorted) set of class labels l0, ..., lk-1 to a set of indexes 0, ..., k-1,
+#         where k is the number of classes
+#
+# Hint 3: For each tree t in the forest, create a (zero) matrix with one row per test instance and one column per class label,
+#         to which one column is added at a time from the output of t.predict_proba 
+#
+# Hint 4: For each column output by t.predict_proba, its index i may be used to obtain its label by t.classes_[i];
+#         you may then obtain the index of this label in the ordered list of all possible labels from the above mapping (hint 2); 
+#         this index points to which column in the prediction matrix the output column should be added to 
+
+class RandomForest2a:
+
+    def __init__(self):
+        self.column_filter = None
+        self.imputation = None
+        self.one_hot = None
+        self.labels = None
+        self.model = None
+        self.label_mapping = None
+
+    def fit(self, df, no_trees=100):
+        df1 = df.copy()
+
+        df1, self.column_filter = create_column_filter(df1)
+        df1, self.imputation = create_imputation(df1)
+        df1, self.one_hot = create_one_hot(df1)
+        self.labels = list(df1["CLASS"].astype("category").cat.categories)
+        self.label_mapping = dict(zip(self.labels, list(range(len(self.labels))))) # mapping hint 2
+        features = df1.drop(columns=["ID", "CLASS"], errors='ignore').to_numpy()
+
+        models = []
+
+        for i in range(no_trees):
+            row_num = np.random.choice(len(features), len(features), replace=True)
+            data = features[row_num]
+            labels=[df1['CLASS'].astype("category")[i] for i in row_num]
+            tree = DecisionTreeClassifier(max_features='log2')
+            # fit the model with data and labels
+            tree.fit(data,labels)
+            models.append(tree)
+        
+        self.model = models
+
+    def predict(self, df):
+        df1 = df.copy()
+
+        df1 = apply_column_filter(df1, self.column_filter)
+        df1 = apply_imputation(df1, self.imputation)
+        df1 = apply_one_hot(df1,self.one_hot)
+        df1.drop(columns=["CLASS"], inplace=True)
+
+        # matrix of zeros (hint 3)
+        probabilities = np.zeros((len(df1),len(self.labels)))
+
+        for tree in self.model:
+            for i, row in enumerate(df1.values):
+                curr_classes = tree.classes_
+                result = tree.predict_proba(row.reshape(1,-1))
+
+                # hint 4
+                for j, col in enumerate(curr_classes):
+                    label_i = self.label_mapping[col]
+                    probabilities[i][label_i] = probabilities[i][label_i] + result[0][j]
+
+        probabilities = probabilities / len(self.model)
+        predictions = pd.DataFrame(probabilities, columns=self.labels)
+
+        return predictions
+
+
+# check results
+def check_2a():
+    train_df = pd.read_csv("anneal_train.csv")
+
+    test_df = pd.read_csv("anneal_test.csv")
+
+    rf = RandomForest2a()
+
+    t0 = time.perf_counter()
+    rf.fit(train_df)
+    print("Training time: {:.2f} s.".format(time.perf_counter()-t0))
+
+    test_labels = test_df["CLASS"]
+
+    t0 = time.perf_counter()
+    predictions = rf.predict(test_df)
+    print("Testing time: {:.2f} s.".format(time.perf_counter()-t0))
+
+    print("Accuracy: {:.4f}".format(accuracy(predictions,test_labels)))
+    print("AUC: {:.4f}".format(auc(predictions,test_labels))) # Comment this out if not implemented in assignment 1
+    print("Brier score: {:.4f}".format(brier_score(predictions,test_labels))) # Comment this out if not implemented in assignment 1
+
+
+
+# Define an extended version of the class RandomForest with the same input and output as described in part 2a above,
+# where the results of the fit function also should include:
+# self.oob_acc - the accuracy estimated on the out-of-bag predictions, i.e., the fraction of training instances for 
+#                which the given (correct) label is the same as the predicted label when using only trees for which
+#                the instance is out-of-bag
+#
+# Hint 1: You may first create a zero matrix with one row for each training instance and one column for each class label
+#         and one zero vector to allow for storing aggregated out-of-bag predictions and the number of out-of-bag predictions
+#         for each training instance, respectively. By "aggregated out-of-bag predictions" is here meant the sum of all 
+#         predicted probabilities (one sum per class and instance). These sums should be divided by the number of predictions
+#         (stored in the vector) in order to obtain a single class probability distribution per training instance. 
+#         This distribution is considered to be the out-of-bag prediction for each instance, and e.g., the class that 
+#         receives the highest probability for each instance can be compared to the correct label of the instance, 
+#         when calculating the accuracy using the out-of-bag predictions.
+#
+# Hint 2: After generating a tree in the forest, iterate over the indexes that were not included in the bootstrap sample
+#         and add a prediction of the tree to the out-of-bag prediction matrix and update the count vector
+#
+# Hint 3: Note that the input to predict_proba has to be a matrix; from a single vector (row) x, a matrix with one row
+#         can be obtained by x[None,:]
+#
+# Hint 4: Finally, divide each row in the out-of-bag prediction matrix with the corresponding element of the count vector
+#
+#         For example, assuming that we have two class labels, then we may end up with the following matrix:
+#
+#         2 4
+#         4 4
+#         5 0
+#         ...
+#
+#         and the vector (no. of predictions) (6, 8, 5, ...)
+#
+#         The resulting class probability distributions are:
+#
+#         0.333... 0.666...
+#         0.5 0.5
+#         1.0 0
+
+class RandomForest2b:
+
+    def __init__(self):
+        self.column_filter = None
+        self.imputation = None
+        self.one_hot = None
+        self.labels = None
+        self.model = None
+        self.label_mapping = None
+        self.oob_acc = None
+
+    def fit(self, df, no_trees=100):
+        df1 = df.copy()
+
+        df1, self.column_filter = create_column_filter(df1)
+        df1, self.imputation = create_imputation(df1)
+        df1, self.one_hot = create_one_hot(df1)
+        self.labels = list(df1["CLASS"].astype("category").cat.categories)
+        self.label_mapping = dict(zip(self.labels, list(range(len(self.labels)))))
+        features = df1.drop(columns=["ID", "CLASS"], errors='ignore').to_numpy()
+
+        models = []
+        missing_trees = []
+
+        for i in range(no_trees):
+            row_num = np.random.choice(len(features), len(features), replace=True)
+            data = features[row_num]
+            labels=[df1['CLASS'].astype("category")[i] for i in row_num]
+            tree = DecisionTreeClassifier(max_features='log2')
+            # fit the model with data and labels
+            tree.fit(data,labels)
+            models.append(tree)
+
+            missing = [x for x in range(len(features)) if x not in row_num]
+            missing_trees.append(missing)
+
+        self.model = models
+        self.oob_acc = self.calc_occ_acc(missing_trees, features, df1)
+
+    def calc_occ_acc(self, missing_trees, features, df1):
+        probabilities = np.zeros((len(features), len(self.labels)))
+        vector = np.zeros(len(features))
+
+        for i in range(len(missing_trees)):
+            curr_miss = missing_trees[i]
+            tree = self.model[i]
+            classes = tree.classes_
+
+            for row in curr_miss:
+                curr_train = features[row].reshape(1,-1)
+                result = tree.predict_proba(curr_train)
+
+                for j, col in enumerate(classes):
+                    label_i = self.label_mapping[col]
+                    probabilities[row][label_i] = probabilities[row][label_i] + result[0][j]
+
+                vector[row] += 1
+
+        acc = probabilities / vector[:, None]
+        acc = pd.DataFrame(acc, columns=self.labels)
+        result = accuracy(acc, df1['CLASS'].astype("category"))   
+
+        return result
+
+    def predict(self, df):
+        df1 = df.copy()
+
+        df1 = apply_column_filter(df1, self.column_filter)
+        df1 = apply_imputation(df1, self.imputation)
+        df1 = apply_one_hot(df1, self.one_hot)
+        df1.drop(columns=["CLASS"], inplace=True)
+
+        probabilities = np.zeros((len(df1), len(self.labels)))
+
+        for tree in self.model:
+            for i, row in enumerate(df1.values):
+                classes = tree.classes_
+                result = tree.predict_proba(row.reshape(1,-1))
+
+                for j, col in enumerate(classes):
+                    label_i = self.label_mapping[col]
+                    probabilities[i][label_i] = probabilities[i][label_i] + result[0][j]
+
+        probabilities = probabilities / len(self.model)
+        predictions = pd.DataFrame(probabilities, columns=self.labels)
+
+        return predictions
+
+# check results
+def check_2b():
+    train_df = pd.read_csv("anneal_train.csv")
+
+    test_df = pd.read_csv("anneal_test.csv")
+
+    rf = RandomForest2b()
+
+    t0 = time.perf_counter()
+    rf.fit(train_df)
+    print("Training time: {:.2f} s.".format(time.perf_counter()-t0))
+
+    print("OOB accuracy: {:.4f}".format(rf.oob_acc))
+
+    test_labels = test_df["CLASS"]
+
+    t0 = time.perf_counter()
+    predictions = rf.predict(test_df)
+    print("Testing time: {:.2f} s.".format(time.perf_counter()-t0))
+
+    print("Accuracy: {:.4f}".format(accuracy(predictions,test_labels)))
+    print("AUC: {:.4f}".format(auc(predictions,test_labels))) # Comment this out if not implemented in assignment 1
+    print("Brier score: {:.4f}".format(brier_score(predictions,test_labels))) # Comment this out if not implemented in assignment 1
+
+    train_labels = train_df["CLASS"]
+    rf = RandomForest2b()
+    rf.fit(train_df)
+    predictions = rf.predict(train_df)
+    print("Accuracy on training set: {0:.2f}".format(accuracy(predictions,train_labels)))
+    print("AUC on training set: {0:.2f}".format(auc(predictions,train_labels)))
+    print("Brier score on training set: {0:.2f}".format(brier_score(predictions,train_labels)))
+
+
+
 
 
 
@@ -380,7 +645,12 @@ def check_1():
 
 
 if __name__ == "__main__":
+    print("------ Assignment 1 ---------")
     check_1()
+    print("------ Assignment 2a ---------")
+    check_2a()
+    print("------ Assignment 2b ---------")
+    check_2b()
 
 
 
