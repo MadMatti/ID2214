@@ -307,11 +307,14 @@ class RandomForest:
         
         models = []
                 
+        # Hint 3: Generate trees from bootstrap replicas of the data
         for i in range(no_trees):
             row_nums=np.random.choice(len(features),len(features), replace=True)
             data = features[row_nums]
+            # get the labels for the fit of the model
             labels=[df1['CLASS'].astype("category")[i] for i in row_nums]
             tree = DecisionTreeClassifier(max_features='log2')
+            # fit the model with data and labels
             tree.fit(data,labels)
             models.append(tree)
         
@@ -323,9 +326,11 @@ class RandomForest:
         df1 = apply_imputation(df1, self.imputation)
         df1 = apply_one_hot(df1,self.one_hot)
         df1.drop(columns=["CLASS"], inplace=True)
-                
+        
+        # matrix of zeros with one row for each test instance and one column for each class label
         probabilities = np.zeros((len(df1),len(self.labels)))
         
+        # iterate over the trees in the forest and calculate probabilities (hint 2)
         for tree in self.model:
             for i, row in enumerate(df1.values):
                 result = tree.predict_proba(row.reshape(1,-1))
