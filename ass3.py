@@ -416,6 +416,7 @@ class RandomForest2a:
 
         models = []
 
+        # Same thing as point 1
         for i in range(no_trees):
             row_num = np.random.choice(len(features), len(features), replace=True)
             data = features[row_num]
@@ -540,6 +541,7 @@ class RandomForest2b:
         models = []
         missing_trees = []
 
+        # same as point1 and 2a
         for i in range(no_trees):
             row_num = np.random.choice(len(features), len(features), replace=True)
             data = features[row_num]
@@ -549,6 +551,7 @@ class RandomForest2b:
             tree.fit(data,labels)
             models.append(tree)
 
+            # Checking out of the bag features and populate the array
             missing = [x for x in range(len(features)) if x not in row_num]
             missing_trees.append(missing)
 
@@ -568,6 +571,7 @@ class RandomForest2b:
                 curr_train = features[row].reshape(1,-1)
                 result = tree.predict_proba(curr_train)
 
+                # Same way as in predict function
                 for j, col in enumerate(classes):
                     label_i = self.label_mapping[col]
                     probabilities[row][label_i] = probabilities[row][label_i] + result[0][j]
