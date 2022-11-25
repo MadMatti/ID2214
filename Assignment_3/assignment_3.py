@@ -19,7 +19,6 @@ class RandomForest:
 
     def fit(self, df, no_trees = 100):
         df1 = df.copy()
-        display(df1)
 
         df1, self.column_filter = create_column_filter(df1)
         df1, self.imputation = create_imputation(df1)
@@ -29,7 +28,6 @@ class RandomForest:
 
         models= []
 
-        display(df1)
         y = df1["CLASS"].to_numpy()
         # print(y)
         df1 = df1.drop(labels = "CLASS", axis = 1,)
@@ -53,14 +51,27 @@ class RandomForest:
     
     def predict(self, df):
         df1 = df.copy()
-        df1 = df1.drop(lables=["CLASS", "ID"])
-        df1=apply_column_filter(df1)
-        df1=apply_imputation(df1)
-        df1=apply_one_hot(df1)
-
-        for tree in self.models:
-            probability = tree.predicy_proba(df1.to_numpy())
         
+        df1 = apply_column_filter(df1, self.column_filter)
+        df1 = apply_imputation(df1, self.imputation)
+        df1 = apply_one_hot(df1, self.one_hot)
+        df1 = df1.drop(labels="CLASS", axis=1)
+
+        probabilities = np.zeros((df1.shape[0],len(self.labels)))
+
+        print(df1.values)
+
+        for tree in self.model:
+            for idx, feature_values in enumerate(df1.values):
+                # print(idx , feature_values)
+                x_test = feature_values.reshape(1,-1)
+                probability = tree.predict_proba(x_test)
+                probabilities[idx] = probabilities[idx] + probability
+        
+        probabilities = probabilities / len(self.model)
+        predictions = pd.DataFrame(probabilities, columns=self.labels)
+        
+        return predictions
 
         print(self.labels)
 
