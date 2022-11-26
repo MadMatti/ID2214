@@ -79,6 +79,7 @@ class RandomForest:
         self.one_hot = None
         self.labels = None
         self.model = None
+        self.hint2_mapping = None
 
     def fit(self, df, no_trees = 100):
         df1 = df.copy()
@@ -88,9 +89,9 @@ class RandomForest:
         df1, self.column_filter = create_column_filter(df1)
         df1, self.imputation = create_imputation(df1)
         df1, self.one_hot = create_one_hot(df1)
-
         self.labels = list(df1["CLASS"].astype("category").cat.categories)
 
+        self.hint2_mapping = {(self.labels[i],i) for i in range(len(self.labels))}
         models= []
 
         y = df1["CLASS"].to_numpy()
