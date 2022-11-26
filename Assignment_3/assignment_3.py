@@ -53,7 +53,7 @@ class RandomForest:
         df1 = df.copy()
         
         df1 = apply_column_filter(df1, self.column_filter)
-        df1 = apply_imputation(df1, self.imputation)
+        # df1 = apply_imputation(df1, self.imputation)
         df1 = apply_one_hot(df1, self.one_hot)
         df1 = df1.drop(labels="CLASS", axis=1)
 
@@ -73,14 +73,16 @@ class RandomForest:
         
         return predictions
 
-        print(self.labels)
-
-
 def testRanddomForest_1():
     # Test your code (leave this part unchanged, except for if auc is undefined)
 
-    train_df = pd.read_csv("Assignment_3/tic-tac-toe_train.csv")
 
+    # train_df = pd.read_csv("tic-tac-toe_train.csv")
+
+    # test_df = pd.read_csv("tic-tac-toe_test.csv")
+
+    train_df = pd.read_csv("Assignment_3/tic-tac-toe_train.csv")
+    
     test_df = pd.read_csv("Assignment_3/tic-tac-toe_test.csv")
 
     rf = RandomForest()
@@ -99,6 +101,12 @@ def testRanddomForest_1():
     print("Accuracy: {:.4f}".format(accuracy(predictions,test_labels)))
     print("AUC: {:.4f}".format(auc(predictions,test_labels))) # Comment this out if not implemented in assignment 1
     print("Brier score: {:.4f}".format(brier_score(predictions,test_labels))) # Comment this out if not implemented in assignment 1
+
+    train_labels = train_df["CLASS"]
+    predictions = rf.predict(train_df)
+    print("Accuracy on training set: {0:.4f}".format(accuracy(predictions,train_labels)))
+    print("AUC on training set: {0:.4f}".format(auc(predictions,train_labels))) # Comment this out if not implemented in assignment 1
+    print("Brier score on training set: {0:.4f}".format(brier_score(predictions,train_labels))) # Comment this out if not implemented in assignment 1
 
 
 testRanddomForest_1()
