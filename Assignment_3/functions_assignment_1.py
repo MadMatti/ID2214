@@ -69,29 +69,22 @@ def create_imputation(df):
     df1 = df.copy()
     imputation = {}
 
-    for col in df1:
+    for col in df.columns:
         if col not in ['CLASS', 'ID']:
-            if df1[col].dtype == "int64" or df1[col].dtype == "float64":
-                if df1[col].isnull().all():
-                    df1[col].fillna(0, inplace=True)
-                df1[col].fillna(df1[col].mean(),inplace=True)
-                imputation[col] = df1[col].mean()
-            elif df1[col].dtype == "object" or df1[col] == "category":
-                if df1[col].isnull().all() and df1[col].dtype == "object":
-                    df1[col].fillna("", inplace=True)
-                elif df1[col].isnull().all() and df1[col].dtype == "object":
-                    df1[col].fillna(df1[col].categories[0], inplace=True)
-
-                df1[col].fillna(df1[col].mode()[0],inplace=True)
-                imputation[col] = df1[col].mode()[0]
+            if df[col].dtype == "int64" or df[col].dtype == "float64":
+                imputation[col] = df[col].mean()
+                df1[col] = df[col].fillna(imputation[col])
+            elif df[col].dtype == "object" or df[col] == "category":
+                imputation[col] = df[col].mode()[0]
+                df1[col] = df[col].fillna(imputation[col])
     return df1, imputation
 
 def apply_imputation(df, imputation):
     df1 = df.copy()
 
-    for col in df1:
+    for col in df.columns:
         if col in imputation.keys():
-            df1[col] = imputation[col]
+            df1[col] = df[col].fillna(imputation[col])
     return df1
 
 def create_bins(df, nobins=10, bintype="equal-width"):
