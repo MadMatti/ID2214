@@ -8,68 +8,67 @@ from functions_assignment_1 import *
 from platform import python_version
 from IPython.display import display
 
-# class RandomForest:
+class RandomForest:
 
-#     def __init__(self):
-#         self.column_filter = None
-#         self.imputation = None
-#         self.one_hot = None
-#         self.labels = None
-#         self.model = None
+    def __init__(self):
+        self.column_filter = None
+        self.imputation = None
+        self.one_hot = None
+        self.labels = None
+        self.model = None
 
-#     def fit(self, df, no_trees = 100):
-#         df1 = df.copy()
+    def fit(self, df, no_trees = 100):
+        df1 = df.copy()
 
-#         df1, self.column_filter = create_column_filter(df1)
-#         df1, self.imputation = create_imputation(df1)
-#         df1, self.one_hot = create_one_hot(df1)
-#         df1["CLASS"] = df1["CLASS"].astype("category")
-#         self.labels = list(df1["CLASS"].cat.categories)
+        df1, self.column_filter = create_column_filter(df1)
+        df1, self.imputation = create_imputation(df1)
+        df1, self.one_hot = create_one_hot(df1)
+        df1["CLASS"] = df1["CLASS"].astype("category")
+        self.labels = list(df1["CLASS"].cat.categories)
 
-#         models= []
+        models= []
 
-#         y = df1["CLASS"].to_numpy()
-#         # print(y)
-#         df1 = df1.drop(labels = "CLASS", axis = 1,)
-#         X = df1.to_numpy()
-#         # print(np.shape(X))
+        y = df1["CLASS"].to_numpy()
+        # print(y)
+        df1 = df1.drop(labels = "CLASS", axis = 1,)
+        X = df1.to_numpy()
+        # print(np.shape(X))
 
-#         random_state=0 
-#         for i in range(no_trees):
-#             # boot_sample = df1.sample(frac=1, replace = True, axis = 0, random_state=random_state+1)
-#             # display(boot_sample)
-#             # y = boot_sample["CLASS"].to_numpy()
-#             # X = boot_sample.drop(labels = "CLASS", axis = 1).to_numpy()            
-#             boot_ids = df1.sample(df1.shape[0], replace=True, random_state=random_state+i).index
-#             tree = DecisionTreeClassifier(max_features="log2")
-#             boot_X=X[boot_ids]
-#             boot_y=y[boot_ids]
-#             tree.fit(boot_X, boot_y)
-#             models.append(tree)
+        random_state=0 
+        for i in range(no_trees):
+            # boot_sample = df1.sample(frac=1, replace = True, axis = 0, random_state=random_state+1)
+            # display(boot_sample)
+            # y = boot_sample["CLASS"].to_numpy()
+            # X = boot_sample.drop(labels = "CLASS", axis = 1).to_numpy()            
+            boot_ids = df1.sample(df1.shape[0], replace=True, random_state=random_state+i).index
+            tree = DecisionTreeClassifier(max_features="log2")
+            boot_X=X[boot_ids]
+            boot_y=y[boot_ids]
+            tree.fit(boot_X, boot_y)
+            models.append(tree)
 
-#         self.model = models
+        self.model = models
     
-#     def predict(self, df):
-#         df1 = df.copy()
+    def predict(self, df):
+        df1 = df.copy()
         
-#         df1 = apply_column_filter(df1, self.column_filter)
-#         df1 = apply_imputation(df1, self.imputation)
-#         df1 = apply_one_hot(df1, self.one_hot)
-#         df1 = df1.drop(labels="CLASS", axis=1)
+        df1 = apply_column_filter(df1, self.column_filter)
+        df1 = apply_imputation(df1, self.imputation)
+        df1 = apply_one_hot(df1, self.one_hot)
+        df1 = df1.drop(labels="CLASS", axis=1)
 
-#         probabilities = np.zeros((df1.shape[0],len(self.labels)))
+        probabilities = np.zeros((df1.shape[0],len(self.labels)))
 
-#         print(df1.values)
-
-#         for tree in self.model:
-#             for idx, X_test in enumerate(df1.values):
-#                 probability = tree.predict_proba(X_test.reshape(1,-1))
-#                 probabilities[idx] = probabilities[idx] + probability
+        # print(df1.values)
+        for tree in self.model:
+            for idx, X_test in enumerate(df1.values):
+                probability = tree.predict_proba(X_test.reshape(1,-1))
+                probabilities[idx] = probabilities[idx] + probability
         
-#         probabilities = probabilities / len(self.model)
-#         predictions = pd.DataFrame(probabilities, columns=self.labels)
+        probabilities = probabilities / len(self.model)
+        predictions = pd.DataFrame(probabilities, columns=self.labels)
         
-#         return predictions
+        return predictions
 
 
 # _____SECOND ASSIGNMENT_____
@@ -141,72 +140,72 @@ from IPython.display import display
 
 
 # _____THIRD ASSIGNMENT_____
-class RandomForest:
+# class RandomForest:
 
-    def __init__(self):
-        self.column_filter = None
-        self.imputation = None
-        self.one_hot = None
-        self.labels = None
-        self.model = None
-        self.hint2_mapping = None
-        self.oob_acc = None
+#     def __init__(self):
+#         self.column_filter = None
+#         self.imputation = None
+#         self.one_hot = None
+#         self.labels = None
+#         self.model = None
+#         self.hint2_mapping = None
+#         self.oob_acc = None
 
-    def fit(self, df, no_trees = 100):
-        df1 = df.copy()
+#     def fit(self, df, no_trees = 100):
+#         df1 = df.copy()
 
-        # display(df1.to_string())
+#         # display(df1.to_string())
 
-        df1, self.column_filter = create_column_filter(df1)
-        df1, self.imputation = create_imputation(df1)
-        df1, self.one_hot = create_one_hot(df1)
-        self.labels = list(df1["CLASS"].astype("category").cat.categories)
-        self.hint2_mapping = {self.labels[i]:i for i in range(len(self.labels))}
+#         df1, self.column_filter = create_column_filter(df1)
+#         df1, self.imputation = create_imputation(df1)
+#         df1, self.one_hot = create_one_hot(df1)
+#         self.labels = list(df1["CLASS"].astype("category").cat.categories)
+#         self.hint2_mapping = {self.labels[i]:i for i in range(len(self.labels))}
         
-        models= []
+#         models= []
 
-        y = df1["CLASS"].to_numpy()
-        df1 = df1.drop(labels = "CLASS", axis = 1,)
-        X = df1.to_numpy()
+#         y = df1["CLASS"].to_numpy()
+#         df1 = df1.drop(labels = "CLASS", axis = 1,)
+#         X = df1.to_numpy()
 
         
-        # You may assume that each class label that is not included
-        # in a bootstrap sample should be assigned zero probability by the tree generated from the bootstrap sample.
-        random_state=0 
-        for i in range(no_trees):
-            boot_ids = df1.sample(df1.shape[0], replace=True, random_state=random_state+i).index
-            tree = DecisionTreeClassifier(max_features="log2")
-            boot_X=X[boot_ids]
-            boot_y=y[boot_ids]
-            tree.fit(boot_X, boot_y)
-            models.append(tree)
+#         # You may assume that each class label that is not included
+#         # in a bootstrap sample should be assigned zero probability by the tree generated from the bootstrap sample.
+#         random_state=0 
+#         for i in range(no_trees):
+#             boot_ids = df1.sample(df1.shape[0], replace=True, random_state=random_state+i).index
+#             tree = DecisionTreeClassifier(max_features="log2")
+#             boot_X=X[boot_ids]
+#             boot_y=y[boot_ids]
+#             tree.fit(boot_X, boot_y)
+#             models.append(tree)
 
-        self.model = models
+#         self.model = models
     
-    def predict(self, df):
-        df1 = df.copy()
+#     def predict(self, df):
+#         df1 = df.copy()
         
-        df1 = apply_column_filter(df1, self.column_filter)
-        df1 = apply_imputation(df1, self.imputation)
-        df1 = apply_one_hot(df1, self.one_hot)
-        df1 = df1.drop(labels="CLASS", axis=1)
+#         df1 = apply_column_filter(df1, self.column_filter)
+#         df1 = apply_imputation(df1, self.imputation)
+#         df1 = apply_one_hot(df1, self.one_hot)
+#         df1 = df1.drop(labels="CLASS", axis=1)
 
-        probabilities = np.zeros((df1.shape[0],len(self.labels)))
+#         probabilities = np.zeros((df1.shape[0],len(self.labels)))
 
-        # print(df1.values)
+#         # print(df1.values)
 
-        for tree in self.model:
-            for idx, X_test in enumerate(df1.values):
-                probability = tree.predict_proba(X_test.reshape(1,-1))
+#         for tree in self.model:
+#             for idx, X_test in enumerate(df1.values):
+#                 probability = tree.predict_proba(X_test.reshape(1,-1))
                 
-                for cls_idx, cls_label in enumerate(tree.classes_):
-                    idx_label = self.hint2_mapping[cls_label]
-                    probabilities[idx][idx_label] = probabilities[idx][idx_label] + probability[0][cls_idx]
+#                 for cls_idx, cls_label in enumerate(tree.classes_):
+#                     idx_label = self.hint2_mapping[cls_label]
+#                     probabilities[idx][idx_label] = probabilities[idx][idx_label] + probability[0][cls_idx]
         
-        probabilities = probabilities / len(self.model)
-        predictions = pd.DataFrame(probabilities, columns=self.labels)
+#         probabilities = probabilities / len(self.model)
+#         predictions = pd.DataFrame(probabilities, columns=self.labels)
         
-        return predictions
+#         return predictions
 
 
 def testRanddomForest_1():
@@ -302,5 +301,5 @@ def testRandomForest_3():
 
     
 # ____TESTS FOR THE ASSIGNMENT____    
-# testRanddomForest_1()
-testRandomForest_2()
+testRanddomForest_1()
+# testRandomForest_2()
