@@ -441,11 +441,10 @@ class RandomForest2a:
 
         for tree in self.model:
             for i, row in enumerate(df1.values):
-                curr_classes = tree.classes_
                 result = tree.predict_proba(row.reshape(1,-1))
 
                 # hint 4
-                for j, col in enumerate(curr_classes):
+                for j, col in enumerate(tree.classes_):
                     label_i = self.label_mapping[col]
                     probabilities[i][label_i] = probabilities[i][label_i] + result[0][j]
 
@@ -559,24 +558,26 @@ class RandomForest2b:
         self.oob_acc = self.calc_oob_acc(missing_trees, features, df1)
 
     def calc_oob_acc(self, missing_trees, features, df1):
+        # Hint 1, create matrix and vector of zeros
         probabilities = np.zeros((len(features), len(self.labels)))
         vector = np.zeros(len(features))
 
         for i , curr_miss in enumerate(missing_trees):
             tree = self.model[i]
-            classes = tree.classes_
 
+            # hint 2
             for row in curr_miss:
                 curr_train = features[row].reshape(1,-1)
                 result = tree.predict_proba(curr_train)
 
                 # Same way as in predict function
-                for j, col in enumerate(classes):
+                for j, col in enumerate(tree.classes_):
                     label_i = self.label_mapping[col]
                     probabilities[row][label_i] = probabilities[row][label_i] + result[0][j]
 
                 vector[row] += 1
-
+        
+        # hint 3 and 4
         acc = probabilities / vector[:, None]
         acc = pd.DataFrame(acc, columns=self.labels)
         result = accuracy(acc, df1['CLASS'].astype("category"))   
