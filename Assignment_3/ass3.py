@@ -343,9 +343,9 @@ class RandomForest:
 
 # check results
 def check_1(): 
-    train_df = pd.read_csv("tic-tac-toe_train.csv")
+    train_df = pd.read_csv("Assignment_3/tic-tac-toe_train.csv")
 
-    test_df = pd.read_csv("tic-tac-toe_test.csv")
+    test_df = pd.read_csv("Assignment_3/tic-tac-toe_test.csv")
 
     rf = RandomForest()
 
@@ -457,9 +457,9 @@ class RandomForest2a:
 
 # check results
 def check_2a():
-    train_df = pd.read_csv("anneal_train.csv")
+    train_df = pd.read_csv("Assignment_3/anneal_train.csv")
 
-    test_df = pd.read_csv("anneal_test.csv")
+    test_df = pd.read_csv("Assignment_3/anneal_test.csv")
 
     rf = RandomForest2a()
 
@@ -609,9 +609,9 @@ class RandomForest2b:
 
 # check results
 def check_2b():
-    train_df = pd.read_csv("anneal_train.csv")
+    train_df = pd.read_csv("Assignment_3/anneal_train.csv")
 
-    test_df = pd.read_csv("anneal_test.csv")
+    test_df = pd.read_csv("Assignment_3/anneal_test.csv")
 
     rf = RandomForest2b()
 
