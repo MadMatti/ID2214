@@ -311,7 +311,7 @@ class RandomForest:
             row_num=np.random.choice(len(features),len(features), replace=True)
             data = features[row_num]
             # get the labels for the fit of the model
-            labels=[df1['CLASS'].astype("category")[i] for i in row_num]
+            labels = df1['CLASS'].to_numpy()[row_num]
             tree = DecisionTreeClassifier(max_features='log2')
             # fit the model with data and labels
             tree.fit(data,labels)
@@ -420,7 +420,7 @@ class RandomForest2a:
         for i in range(no_trees):
             row_num = np.random.choice(len(features), len(features), replace=True)
             data = features[row_num]
-            labels=[df1['CLASS'].astype("category")[i] for i in row_num]
+            labels = df1['CLASS'].to_numpy()[row_num]
             tree = DecisionTreeClassifier(max_features='log2')
             # fit the model with data and labels
             tree.fit(data,labels)
@@ -545,7 +545,7 @@ class RandomForest2b:
         for i in range(no_trees):
             row_num = np.random.choice(len(features), len(features), replace=True)
             data = features[row_num]
-            labels=[df1['CLASS'].astype("category")[i] for i in row_num]
+            labels = df1['CLASS'].to_numpy()[row_num]
             tree = DecisionTreeClassifier(max_features='log2')
             # fit the model with data and labels
             tree.fit(data,labels)
@@ -556,14 +556,13 @@ class RandomForest2b:
             missing_trees.append(missing)
 
         self.model = models
-        self.oob_acc = self.calc_occ_acc(missing_trees, features, df1)
+        self.oob_acc = self.calc_oob_acc(missing_trees, features, df1)
 
-    def calc_occ_acc(self, missing_trees, features, df1):
+    def calc_oob_acc(self, missing_trees, features, df1):
         probabilities = np.zeros((len(features), len(self.labels)))
         vector = np.zeros(len(features))
 
-        for i in range(len(missing_trees)):
-            curr_miss = missing_trees[i]
+        for i , curr_miss in enumerate(missing_trees):
             tree = self.model[i]
             classes = tree.classes_
 
