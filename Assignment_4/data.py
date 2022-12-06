@@ -26,6 +26,8 @@ def feature_extraction(df):
     df['exact_mol_wt'] = df['mol'].apply(lambda x: Descriptors.ExactMolWt(x))
     df['AI_COO'] = df['mol'].apply(lambda x: Descriptors.fr_Al_COO(x))
     df['morgan_fp'] = df['mol'].apply(lambda x: AllChem.GetMorganFingerprintAsBitVect(x,2,nBits=124))
+    # convert morgan_fp to string
+    df['morgan_fp'] = df['morgan_fp'].apply(lambda x: x.ToBitString())
     df.drop('mol', axis=1, inplace=True)
 
     return df
@@ -34,22 +36,22 @@ def data_cleaning(df):
     # move label to last position
     last_column = df.pop('ACTIVE')
     df['ACTIVE'] = last_column
-    print(df)
-    print(df.info())
-    print(df.shape)
+    # print(df)
+    # print(df.info())
+    # print(df.shape)
     print(df.drop_duplicates().shape) # no duplicates
     print(df.isnull().sum()) # no missing values
 
-    with pd.option_context('display.max_columns', 40):
-        print(df.describe(include='all'))
+    # with pd.option_context('display.max_columns', 40):
+    #     print(df.describe(include='all'))
 
     # outliers detections
-    ZSCORE_THREASHOLD = 4
-    zscore = np.abs(stats.zscore(df.select_dtypes(include=["float", "int64"])))
+    # ZSCORE_THREASHOLD = 4
+    # zscore = np.abs(stats.zscore(df.select_dtypes(include=["float", "int64"])))
 
-    is_inlier = ~ (zscore > ZSCORE_THREASHOLD).any(axis=1)
-    df = df[is_inlier]
-    print(df.info()) # 4.2% of the data is removed -> accetable number
+    # is_inlier = ~ (zscore > ZSCORE_THREASHOLD).any(axis=1)
+    # df = df[is_inlier]
+    # print(df.info()) # 4.2% of the data is removed -> accetable number
 
     return df
 
@@ -63,8 +65,14 @@ def data_analysis(df):
     # data are highly correlated, we may want to drop number of heavy atoms
 
     # check distribution of the label
-    df.ACTIVE.value_counts().plot(kind='bar')
+    numY, numN = df.ACTIVE.value_counts()
+    print(numY, numN)
+    df.ACTIVE.value_counts().plot(kind='pie',autopct='%1.0f%%', colors=['royalblue','red'])
+    plt.title("Label Distribution")
+    plt.xlabel("ACTIVE = 1730")
+    plt.ylabel("INACTIVE = 154528")
     plt.show()
+    
 
     
 
