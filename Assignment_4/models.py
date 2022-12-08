@@ -224,12 +224,12 @@ def test_models(models, Xy_test):
 
     for name in models.keys():
         model = models[name]
-        print("----------" + name + "----------")
+        # print("----------" + name + "----------")
         y_pred_prob = model.predict_proba(X_test)[::,1]
         auc = roc_auc_score(y_test, y_pred_prob)
         AUC_models[name].append(auc)
         auc_list.append(auc)
-        print(auc)
+        # print(auc)
 
     return auc_list
         
