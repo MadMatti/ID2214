@@ -16,6 +16,9 @@ from rdkit.Chem import rdMolDescriptors
 from sklearn.feature_selection import SelectKBest
 from sklearn.feature_selection import chi2
 from sklearn.ensemble import ExtraTreesClassifier
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.feature_selection import SelectFromModel
 
 
 filename = 'Assignment_4/Resources/training_smiles.csv'
@@ -114,6 +117,41 @@ def feature_extraction_complete(df):
 
     return df
 
+def all_features_to_csv(df):
+    df['num_atoms'] = df['mol'].apply(lambda x: x.GetNumAtoms())
+    df['num_heavy_atoms'] = df['mol'].apply(lambda x: x.GetNumHeavyAtoms())
+    df['exact_mol_wt'] = df['mol'].apply(lambda x: Descriptors.ExactMolWt(x))
+    df['AI_COO'] = df['mol'].apply(lambda x: Descriptors.fr_Al_COO(x))
+    df['morgan_fp'] = df['mol'].apply(lambda x: AllChem.GetMorganFingerprintAsBitVect(x,2,nBits=124))
+    # convert morgan_fp to string
+    df['morgan_fp'] = df['morgan_fp'].apply(lambda x: x.ToBitString())
+
+    df['num_hetero_atoms'] = df['mol'].apply(lambda x: Lipinski.NumHeteroatoms(x))
+    df['num_bonds'] = df['mol'].apply(lambda x: x.GetNumBonds())
+    df['num_rotatable_bonds'] = df['mol'].apply(lambda x: rdMolDescriptors.CalcNumRotatableBonds(x))
+    df['num_aliphatic_rings'] = df['mol'].apply(lambda x: rdMolDescriptors.CalcNumAliphaticRings(x))
+    df['num_aromatic_rings'] = df['mol'].apply(lambda x: rdMolDescriptors.CalcNumAromaticRings(x))
+    df['num_saturated_rings'] = df['mol'].apply(lambda x: rdMolDescriptors.CalcNumSaturatedRings(x))
+    df['Num_radical_electrons'] = df['mol'].apply(lambda x: Descriptors.NumRadicalElectrons(x))
+    df['Num_valence_electrons'] = df['mol'].apply(lambda x: Descriptors.NumValenceElectrons(x))
+    df['Ar_N'] = df['mol'].apply(lambda x: Fragments.fr_Ar_N(x))
+    df['COO'] = df['mol'].apply(lambda x: Fragments.fr_COO(x))
+    df['amide'] = df['mol'].apply(lambda x: Fragments.fr_amide(x))
+    df['benzene'] = df['mol'].apply(lambda x: Fragments.fr_benzene(x))
+    df['ester'] = df['mol'].apply(lambda x: Fragments.fr_ester(x))
+    df['nitro'] = df['mol'].apply(lambda x: Fragments.fr_nitro(x))
+    df['nitro_arom'] = df['mol'].apply(lambda x: Fragments.fr_nitro_arom(x))
+    df['NHOH_count'] = df['mol'].apply(lambda x: Lipinski.NHOHCount(x))
+    df['NO_count'] = df['mol'].apply(lambda x: Lipinski.NOCount(x))
+    df['num_H_acceptors'] = df['mol'].apply(lambda x: Lipinski.NumHAcceptors(x))
+    df['num_H_donors'] = df['mol'].apply(lambda x: Lipinski.NumHDonors(x))
+    df['num_saturated_rings'] = df['mol'].apply(lambda x: rdMolDescriptors.CalcNumSaturatedRings(x))
+    # 30 features extracted
+
+    df.drop('mol', axis=1, inplace=True)
+
+    df.to_csv('all_features.csv')
+
 def univariate_selection(df):
     df1 = df.copy()
     y = df1['ACTIVE']
@@ -135,13 +173,14 @@ def feature_importance(df):
     y = df1['ACTIVE']
     X = df1.drop('ACTIVE', axis=1)
 
-    df = df[np.isfinite(df.select_dtypes(include=np.number)).all(1)]
+    model = Pipeline(steps=[('scaler', StandardScaler()),
+                            ('extreme', ExtraTreesClassifier())])
 
-    model = ExtraTreesClassifier()
+    #model = ExtraTreesClassifier()
     model.fit(X,y)
-    print(model.feature_importances_) #use inbuilt class feature_importances of tree based classifiers
+    print(model[1][1].feature_importances_) #use inbuilt class feature_importances of tree based classifiers
     #plot graph of feature importances for better visualization
-    feat_importances = pd.Series(model.feature_importances_, index=X.columns)
+    feat_importances = pd.Series(model[1][1].feature_importances_, index=X.columns)
     feat_importances.nlargest(10).plot(kind='barh')
     plt.show()
 
@@ -156,6 +195,7 @@ def correlation_matrix(df):
     plt.figure(figsize=(20,20))
     #plot heat map
     g=sn.heatmap(df1[top_corr_features].corr(),annot=True,cmap="RdYlGn")
+    plt.show()
 
     
 def data_analysis(df):
