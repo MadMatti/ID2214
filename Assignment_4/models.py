@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 
-from data import load_data, get_mol, feature_extraction, data_cleaning
+from data import load_data, get_mol, feature_extraction, data_cleaning, feature_extraction_1
 
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
@@ -240,7 +240,7 @@ def test_models(models, Xy_test):
 
 if __name__ == "__main__":
     df = load_data()
-    df_feat = feature_extraction(get_mol(df))
+    df_feat = feature_extraction_1(get_mol(df))
     df_clean = data_cleaning(df_feat)
     # print("AUC score base")
     # test_models(modelling(transform(split(df_clean, 'train')), split(df_clean, 'train')), split(df_clean, 'test'))

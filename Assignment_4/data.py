@@ -26,11 +26,37 @@ def feature_extraction(df):
     df['exact_mol_wt'] = df['mol'].apply(lambda x: Descriptors.ExactMolWt(x))
     df['AI_COO'] = df['mol'].apply(lambda x: Descriptors.fr_Al_COO(x))
     df['morgan_fp'] = df['mol'].apply(lambda x: AllChem.GetMorganFingerprintAsBitVect(x,2,nBits=124))
+
     # convert morgan_fp to string
     df['morgan_fp'] = df['morgan_fp'].apply(lambda x: x.ToBitString())
+
     df.drop('mol', axis=1, inplace=True)
+    df.drop('num_heavy_atoms', axis=1, inplace=True)
 
     return df
+
+def feature_extraction_1(df1):
+    #add additional features
+    df1["n_Atoms"] = df1['mol'].map(lambda x: x.GetNumAtoms())
+    df1["ExactMolWt"] = df1['mol'].map(lambda x: Descriptors.ExactMolWt(x))
+    df1["Fragments"] = df1['mol'].map(lambda x: Descriptors.fr_Al_COO(x))
+    df1["HeavyAtomCount"] = df1['mol'].map(lambda x: x.GetNumHeavyAtoms())
+    df1["MorganFingerPrint"] = df1['mol'].map(lambda x: AllChem.GetMorganFingerprintAsBitVect(x,2,nBits=124).ToBitString())
+    
+    #split fingerprint per bit 
+    df1_fingerprints = df1['MorganFingerPrint'].str.split('', expand=True)
+    df1 = pd.concat([df1,df1_fingerprints],axis=1)
+    df1.columns = df1.columns.astype(str)
+    df1 = df1.drop(columns=['0','125'])
+    
+    #drop HeavyAtomCount since , except for 3 row, the column is equal to n_Atoms. 
+    df1 = df1.drop(columns=['HeavyAtomCount','MorganFingerPrint', 'mol'])
+   
+    #Set type of binary values to int
+    for column in df1.columns[-125:]:
+        df1[column] = df1[column].astype('int64')
+    
+    return df1
 
 def data_cleaning(df):
     # move label to last position
