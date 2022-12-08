@@ -27,6 +27,7 @@ from sklearn.naive_bayes import GaussianNB
 
 
 R = 42
+AUC_models = {name: [] for name in ['Random Forest', 'Extreme Random Forest', 'Gradient Boosting', 'Logistic Regression', 'Bayes']}
 
 def split(df, which='train'):
     # split into train and test
@@ -107,13 +108,13 @@ def modelling(preprocessor, Xy_train):
 
     models = {}
 
-    # random forest
-    forest = Pipeline(steps=[('preprocessor', preprocessor),
-                                ('scaler', StandardScaler()),
-                                ('forest', RandomForestClassifier())]) # R
+    # # random forest
+    # forest = Pipeline(steps=[('preprocessor', preprocessor),
+    #                             ('scaler', StandardScaler()),
+    #                             ('forest', RandomForestClassifier())]) # R
 
-    forest.fit(X_train, y_train)
-    models["Random Forest"] = forest
+    # forest.fit(X_train, y_train)
+    # models["Random Forest"] = forest
 
     # params_forest = { 
     # 'forest__bootstrap': [True, False],
@@ -137,6 +138,8 @@ def modelling(preprocessor, Xy_train):
     
     extreme.fit(X_train, y_train)
     models["Extreme Random Forest"] = extreme
+
+    return models
 
     # params_extreme = { 
     #     'extreme__bootstrap': [True, False],
@@ -217,13 +220,19 @@ def modelling(preprocessor, Xy_train):
 
 def test_models(models, Xy_test):
     X_test, y_test = Xy_test
+    auc_list = []
 
     for name in models.keys():
         model = models[name]
         print("----------" + name + "----------")
         y_pred_prob = model.predict_proba(X_test)[::,1]
         auc = roc_auc_score(y_test, y_pred_prob)
+        AUC_models[name].append(auc)
+        auc_list.append(auc)
         print(auc)
+
+    return auc_list
+        
     
 
 
@@ -250,11 +259,18 @@ if __name__ == "__main__":
     auc_synt_under = []
     for i in range(50):
         print(i)
-        auc_base.append(test_models(modelling(transform(split(df_clean, 'train')), split(df_clean, 'train')), split(df_clean, 'test')))
-        auc_over.append(test_models(modelling(transform(oversampling(split(df_clean, 'train'))), oversampling(split(df_clean, 'train'))), split(df_clean, 'test')))
-        auc_under.append(test_models(modelling(transform(undersampling(split(df_clean, 'train'))), undersampling(split(df_clean, 'train'))), split(df_clean, 'test')))
-        auc_synt.append(test_models(modelling(transform(syntetic_samples(split(df_clean, 'train'))), syntetic_samples(split(df_clean, 'train'))), split(df_clean, 'test')))
-        auc_synt_under.append(test_models(modelling(transform(syntetic_under(split(df_clean, 'train'))), syntetic_under(split(df_clean, 'train'))), split(df_clean, 'test')))
+        auc_base_i = (test_models(modelling(transform(split(df_clean, 'train')), split(df_clean, 'train')), split(df_clean, 'test')))
+        auc_over_i = (test_models(modelling(transform(oversampling(split(df_clean, 'train'))), oversampling(split(df_clean, 'train'))), split(df_clean, 'test')))
+        auc_under_i = (test_models(modelling(transform(undersampling(split(df_clean, 'train'))), undersampling(split(df_clean, 'train'))), split(df_clean, 'test')))
+        auc_synt_i = (test_models(modelling(transform(syntetic_samples(split(df_clean, 'train'))), syntetic_samples(split(df_clean, 'train'))), split(df_clean, 'test')))
+        auc_synt_under_i = (test_models(modelling(transform(syntetic_under(split(df_clean, 'train'))), syntetic_under(split(df_clean, 'train'))), split(df_clean, 'test')))
+        
+        auc_base.extend(auc_base_i)
+        auc_over.extend(auc_over_i)
+        auc_under.extend(auc_under_i)
+        auc_synt.extend(auc_synt_i)
+        auc_synt_under.extend(auc_synt_under_i)
+        
 
 
     print("----------------------|||||||||||-|||||||||||----------------------")
@@ -268,3 +284,8 @@ if __name__ == "__main__":
     print(np.mean(auc_synt))
     print("AUC score syntetic undersampled")
     print(np.mean(auc_synt_under))
+
+    print("----------------------|||||||||||-|||||||||||----------------------")
+    for model in AUC_models.keys():
+        print(model)
+        print(np.mean(AUC_models[model]))
