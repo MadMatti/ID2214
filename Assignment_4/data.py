@@ -225,7 +225,9 @@ def data_analysis(df):
 
 if __name__ == '__main__':
     #data_analysis(data_cleaning(feature_extraction(get_mol(load_data()))))
-    univariate_selection(data_cleaning(feature_extraction_complete(get_mol(load_data()))))
-    feature_importance(data_cleaning(feature_extraction_complete(get_mol(load_data()))))
-    correlation_matrix(data_cleaning(feature_extraction_complete(get_mol(load_data()))))
+    # all_features_to_csv(get_mol(load_data()))
+    features = pd.read_csv('Assignment_4/resources/all_features.csv', index_col=0)
+    univariate_selection(data_cleaning(features))
+    feature_importance(data_cleaning(features))
+    correlation_matrix(data_cleaning(features))
     
