@@ -13,12 +13,12 @@ from rdkit.Chem import Fragments
 from rdkit.Chem import Lipinski
 from rdkit.Chem import rdMolDescriptors
 
-from sklearn.feature_selection import SelectKBest
-from sklearn.feature_selection import chi2
+from sklearn.feature_selection import SelectKBest, chi2, RFECV
 from sklearn.ensemble import ExtraTreesClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.feature_selection import SelectFromModel
+from sklearn.model_selection import StratifiedKFold
 
 
 filename = 'Assignment_4/Resources/training_smiles.csv'
@@ -226,6 +226,20 @@ def final_selection(all_features):
     # plt.show()
 
     return final_features
+
+def feature_selection(all_features):
+    # feature selection using Recursive Feature Elimination
+
+    X = all_features.drop('ACTIVE', axis=1)
+    y = all_features['ACTIVE']
+
+    # Selecting the most important features according to ExtraTreesClassifier
+    model = Pipeline(steps=[('scaler', StandardScaler()),
+                            ('extreme', ExtraTreesClassifier())])
+
+    rfecv_selector = RFECV(estimator=model[1][1], cv=StratifiedKFold(5), scoring='roc_auc', n_jobs=-1, min_features_to_select=10)
+
+
 
 
 

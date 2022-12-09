@@ -154,7 +154,7 @@ def modelling(preprocessor, Xy_train):
         'extreme__random_state': [1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, None],
     }
 
-    extreme_search = RandomizedSearchCV(extreme, param_distributions=params_extreme, n_iter=10, verbose=1, n_jobs=-1, cv=cv, scoring='roc_auc')
+    extreme_search = RandomizedSearchCV(extreme, param_distributions=params_extreme, n_iter=240, verbose=1, n_jobs=-1, cv=cv, scoring='roc_auc')
     extreme_search.fit(X_train, y_train)
     print(extreme_search.best_params_)
     print(extreme_search.best_score_)
@@ -258,31 +258,52 @@ if __name__ == "__main__":
     # test_models(modelling(transform(syntetic_samples(split(df_clean, 'train'))), syntetic_samples(split(df_clean, 'train'))), split(df_clean, 'test'))
     # print("AUC score syntetic undersampled")
     # test_models(modelling(transform(syntetic_under(split(df_clean, 'train'))), syntetic_under(split(df_clean, 'train'))), split(df_clean, 'test'))
-    auc_base = []
-    auc_over = []
-    auc_under = []
-    for i in range(50):
-        print(i)
-        auc_base_i = (test_models(modelling(transform(split(df_clean, 'train')), split(df_clean, 'train')), split(df_clean, 'test')))
-        auc_over_i = (test_models(modelling(transform(oversampling(split(df_clean, 'train'))), oversampling(split(df_clean, 'train'))), split(df_clean, 'test')))
-        auc_under_i = (test_models(modelling(transform(undersampling(split(df_clean, 'train'))), undersampling(split(df_clean, 'train'))), split(df_clean, 'test')))
+
+
+    '''Use this code to test not to train'''
+    # auc_base = []
+    # auc_over = []
+    # auc_under = []
+    # for i in range(50):
+    #     print(i)
+    #     auc_base_i = (test_models(modelling(transform(split(df_clean, 'train')), split(df_clean, 'train')), split(df_clean, 'test')))
+    #     auc_over_i = (test_models(modelling(transform(oversampling(split(df_clean, 'train'))), oversampling(split(df_clean, 'train'))), split(df_clean, 'test')))
+    #     auc_under_i = (test_models(modelling(transform(undersampling(split(df_clean, 'train'))), undersampling(split(df_clean, 'train'))), split(df_clean, 'test')))
         
-        auc_base.extend(auc_base_i)
-        auc_over.extend(auc_over_i)
-        auc_under.extend(auc_under_i)
+    #     auc_base.extend(auc_base_i)
+    #     auc_over.extend(auc_over_i)
+    #     auc_under.extend(auc_under_i)
         
 
 
-    print("----------------------|||||||||||-|||||||||||----------------------")
-    print("AUC score base")
-    print(np.mean(auc_base))
-    print("AUC score oversampled")
-    print(np.mean(auc_over))
-    print("AUC score undersampled")
-    print(np.mean(auc_under))
-    print("AUC score syntetic samples")
+    # print("----------------------|||||||||||-|||||||||||----------------------")
+    # print("AUC score base")
+    # print(np.mean(auc_base))
+    # print("AUC score oversampled")
+    # print(np.mean(auc_over))
+    # print("AUC score undersampled")
+    # print(np.mean(auc_under))
+    # print("AUC score syntetic samples")
 
+    # print("----------------------|||||||||||-|||||||||||----------------------")
+    # for model in AUC_models.keys():
+    #     print(model)
+    #     print(np.mean(AUC_models[model]))
+
+    '''Use this code to train'''
     print("----------------------|||||||||||-|||||||||||----------------------")
-    for model in AUC_models.keys():
-        print(model)
-        print(np.mean(AUC_models[model]))
+    print("Original Dataset")
+    modelling(transform(split(df_clean, 'train')), split(df_clean, 'train'))
+    print("----------------------|||||||||||-|||||||||||----------------------")
+    print("Oversampled Dataset")
+    modelling(transform(oversampling(split(df_clean, 'train'))), oversampling(split(df_clean, 'train')))
+    print("----------------------|||||||||||-|||||||||||----------------------")
+    print("Undersampled Dataset")
+    modelling(transform(undersampling(split(df_clean, 'train'))), undersampling(split(df_clean, 'train')))
+    print("----------------------|||||||||||-|||||||||||----------------------")
+    print("Syntetic Dataset")
+    modelling(transform(syntetic_samples(split(df_clean, 'train'))), syntetic_samples(split(df_clean, 'train')))
+    print("----------------------|||||||||||-|||||||||||----------------------")
+    print("Syntetic Undersampled Dataset")
+    modelling(transform(syntetic_under(split(df_clean, 'train'))), syntetic_under(split(df_clean, 'train')))
+
