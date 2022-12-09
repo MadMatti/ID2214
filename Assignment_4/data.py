@@ -166,7 +166,8 @@ def univariate_selection(df):
     featureScores = pd.concat([dfcolumns,dfscores],axis=1)
     featureScores.columns = ['Specs','Score']  #naming the dataframe columns
     
-    print(tabulate(featureScores.nlargest(10,'Score'), tablefmt='psql')) # print 10 best features
+    # print(tabulate(featureScores.nlargest(10,'Score'), tablefmt='psql')) # print 10 best features
+    return featureScores.nlargest(10, 'Score')
 
 def feature_importance(df):
     df1 = df.copy()
@@ -182,7 +183,8 @@ def feature_importance(df):
     #plot graph of feature importances for better visualization
     feat_importances = pd.Series(model[1][1].feature_importances_, index=X.columns)
     feat_importances.nlargest(10).plot(kind='barh')
-    plt.show()
+    # plt.show()
+    return feat_importances.nlargest(10)
 
 def correlation_matrix(df):
     df1 = df.copy()
@@ -196,6 +198,39 @@ def correlation_matrix(df):
     #plot heat map
     g=sn.heatmap(df1[top_corr_features].corr(),annot=True,cmap="RdYlGn")
     plt.show()
+
+def final_selection(all_features):
+
+    univariate = univariate_selection(all_features)
+    importance = feature_importance(all_features)
+
+    uni_list = univariate['Specs'].tolist()
+    imp_list = importance.index.tolist()
+    
+    # List containing element from both selection techniques
+    final_list = list(set(uni_list + imp_list))
+    final_list.append('ACTIVE') # add the target column
+
+    # now check the correlation matrix of this features
+    final_features = all_features[final_list] # df with only wanted features
+
+    # now we can drop featuers that are highly correlated
+    final_features.drop(['Num_valence_electrons', 'num_heavy_atoms', 'num_bonds', 'num_hetero_atoms', 'NO_count'], axis=1, inplace=True)
+
+    # corrmat = final_features.corr()
+    # top_corr_features = corrmat.index
+    # plt.figure(figsize=(20,20))
+    # #plot heat map
+    # g=sn.heatmap(final_features[top_corr_features].corr(),annot=True,cmap="RdYlGn")
+    # plt.xticks(rotation=90)
+    # plt.show()
+
+    return final_features
+
+
+
+    
+
 
     
 def data_analysis(df):
@@ -227,7 +262,8 @@ if __name__ == '__main__':
     #data_analysis(data_cleaning(feature_extraction(get_mol(load_data()))))
     # all_features_to_csv(get_mol(load_data()))
     features = pd.read_csv('Assignment_4/resources/all_features.csv', index_col=0)
-    univariate_selection(data_cleaning(features))
-    feature_importance(data_cleaning(features))
-    correlation_matrix(data_cleaning(features))
+    # univariate_selection(data_cleaning(features))
+    # feature_importance(data_cleaning(features))
+    # correlation_matrix(data_cleaning(features))
+    final_selection(data_cleaning(features))
     

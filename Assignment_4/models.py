@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 
-from data import load_data, get_mol, feature_extraction, data_cleaning, feature_extraction_1
+from data import *
 
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
@@ -23,6 +23,9 @@ from sklearn.ensemble import RandomForestClassifier, ExtraTreesClassifier, Gradi
 from sklearn.svm import SVC 
 from sklearn.linear_model import LogisticRegression
 from sklearn.naive_bayes import GaussianNB
+
+import warnings
+warnings.filterwarnings("ignore")
 
 
 
@@ -139,22 +142,24 @@ def modelling(preprocessor, Xy_train):
     extreme.fit(X_train, y_train)
     models["Extreme Random Forest"] = extreme
 
+    
+
+    params_extreme = { 
+        'extreme__bootstrap': [True, False],
+        'extreme__max_depth': [10, 20, 30, 40, 45, 50, 55, 60, 65, 70, 75, 80, 90, 100, None],
+        'extreme__max_features': ['sqrt', 'log2'],
+        'extreme__min_samples_leaf': [1, 2, 3, 4],
+        'extreme__min_samples_split': [2, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+        'extreme__n_estimators': [200, 600, 800, 850, 875, 900, 950, 975, 1000, 1100, 1200, 1400, 1600, 1800, 2000, 2200, 2400],
+        'extreme__random_state': [1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, None],
+    }
+
+    extreme_search = RandomizedSearchCV(extreme, param_distributions=params_extreme, n_iter=10, verbose=1, n_jobs=-1, cv=cv, scoring='roc_auc')
+    extreme_search.fit(X_train, y_train)
+    print(extreme_search.best_params_)
+    print(extreme_search.best_score_)
+
     return models
-
-    # params_extreme = { 
-    #     'extreme__bootstrap': [True, False],
-    #     'extreme__max_depth': [10, 20, 30, 40, 45, 50, 55, 60, 65, 70, 75, 80, 90, 100, None],
-    #     'extreme__max_features': ['sqrt', 'log2'],
-    #     'extreme__min_samples_leaf': [1, 2, 3, 4],
-    #     'extreme__min_samples_split': [2, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-    #     'extreme__n_estimators': [200, 600, 800, 850, 875, 900, 950, 975, 1000, 1100, 1200, 1400, 1600, 1800, 2000, 2200, 2400],
-    #     'extreme__random_state': [1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, None],
-    # }
-
-    # extreme_search = RandomizedSearchCV(extreme, param_distributions=params_extreme, n_iter=10, verbose=1, n_jobs=-1, cv=cv, scoring='roc_auc')
-    # extreme_search.fit(X_train, y_train)
-    # print(extreme_search.best_params_)
-    # print(extreme_search.best_score_)
 
     # SVM
     # svm = Pipeline(steps=[('preprocessor', preprocessor),
@@ -240,7 +245,8 @@ def test_models(models, Xy_test):
 
 if __name__ == "__main__":
     df = load_data()
-    df_feat = feature_extraction(get_mol(df))
+    features = pd.read_csv('Assignment_4/resources/all_features.csv', index_col=0)
+    df_feat = final_selection(data_cleaning(features))
     df_clean = data_cleaning(df_feat)
     # print("AUC score base")
     # test_models(modelling(transform(split(df_clean, 'train')), split(df_clean, 'train')), split(df_clean, 'test'))
@@ -255,21 +261,15 @@ if __name__ == "__main__":
     auc_base = []
     auc_over = []
     auc_under = []
-    auc_synt = []
-    auc_synt_under = []
     for i in range(50):
         print(i)
         auc_base_i = (test_models(modelling(transform(split(df_clean, 'train')), split(df_clean, 'train')), split(df_clean, 'test')))
         auc_over_i = (test_models(modelling(transform(oversampling(split(df_clean, 'train'))), oversampling(split(df_clean, 'train'))), split(df_clean, 'test')))
         auc_under_i = (test_models(modelling(transform(undersampling(split(df_clean, 'train'))), undersampling(split(df_clean, 'train'))), split(df_clean, 'test')))
-        auc_synt_i = (test_models(modelling(transform(syntetic_samples(split(df_clean, 'train'))), syntetic_samples(split(df_clean, 'train'))), split(df_clean, 'test')))
-        auc_synt_under_i = (test_models(modelling(transform(syntetic_under(split(df_clean, 'train'))), syntetic_under(split(df_clean, 'train'))), split(df_clean, 'test')))
         
         auc_base.extend(auc_base_i)
         auc_over.extend(auc_over_i)
         auc_under.extend(auc_under_i)
-        auc_synt.extend(auc_synt_i)
-        auc_synt_under.extend(auc_synt_under_i)
         
 
 
@@ -281,9 +281,6 @@ if __name__ == "__main__":
     print("AUC score undersampled")
     print(np.mean(auc_under))
     print("AUC score syntetic samples")
-    print(np.mean(auc_synt))
-    print("AUC score syntetic undersampled")
-    print(np.mean(auc_synt_under))
 
     print("----------------------|||||||||||-|||||||||||----------------------")
     for model in AUC_models.keys():
