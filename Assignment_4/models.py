@@ -34,7 +34,7 @@ warnings.filterwarnings("ignore")
 R = 42
 AUC_models = {name: [] for name in ['Random Forest', 'Extreme Random Forest', 'Gradient Boosting', 'Logistic Regression', 'Bayes']}
 
-def split(df, which='train'):
+def split(df):
     # split into train and test
     y = df['ACTIVE']
     X = df.drop('ACTIVE', axis=1)
@@ -81,7 +81,7 @@ def syntetic_samples(Xy_train):
 def syntetic_under(Xy_train):
     X_train, y_train = Xy_train
 
-    over = SMOTE(sampling_strategy=0.1, k_neighbors=20) # R
+    over = SMOTE(sampling_strategy=0.4, k_neighbors=20) # R
     under = RandomUnderSampler(sampling_strategy=0.5) # R
 
     steps = [('o', over), ('u', under)]
@@ -156,20 +156,20 @@ def modelling(preprocessor, Xy_train):
 
     
 
-    # params_extreme = { 
-    #     'extreme__bootstrap': [True, False],
-    #     'extreme__max_depth': [10, 20, 30, 40, 45, 50, 55, 60, 65, 70, 75, 80, 90, 100, None],
-    #     'extreme__max_features': ['sqrt', 'log2'],
-    #     'extreme__min_samples_leaf': [1, 2, 3, 4],
-    #     'extreme__min_samples_split': [2, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-    #     'extreme__n_estimators': [200, 600, 800, 850, 875, 900, 950, 975, 1000, 1100, 1200, 1400, 1600, 1800, 2000, 2200, 2400],
-    #     'extreme__random_state': [1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, None],
-    # }
+    params_extreme = { 
+        'extreme__bootstrap': [True, False],
+        'extreme__max_depth': [10, 20, 30, 40, 45, 50, 55, 60, 65, 70, 75, 80, 90, 100, None],
+        'extreme__max_features': ['sqrt', 'log2'],
+        'extreme__min_samples_leaf': [1, 2, 3, 4],
+        'extreme__min_samples_split': [2, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+        'extreme__n_estimators': [200, 600, 800, 850, 875, 900, 950, 975, 1000, 1100, 1200, 1400, 1600, 1800, 2000, 2200, 2400],
+        'extreme__random_state': [1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, None],
+    }
 
-    # extreme_search = RandomizedSearchCV(extreme, param_distributions=params_extreme, n_iter=240, verbose=1, n_jobs=-1, cv=cv, scoring='roc_auc')
-    # extreme_search.fit(X_train, y_train)
-    # print(extreme_search.best_params_)
-    # print(extreme_search.best_score_)
+    extreme_search = RandomizedSearchCV(extreme, param_distributions=params_extreme, n_iter=20, verbose=1, n_jobs=-1, cv=cv, scoring='roc_auc')
+    extreme_search.fit(X_train, y_train)
+    print(extreme_search.best_params_)
+    print(extreme_search.best_score_)
 
     return models
 
@@ -254,6 +254,7 @@ def test_model(preprocessor, Xy_test):
     X_test, y_test = Xy_test
     extreme_auc = []
     extreme_std_auc = []
+    extreme_f1 = []
 
     for i in range(100):
         X_test, y_test = shuffle(X_test, y_test)
@@ -269,6 +270,10 @@ def test_model(preprocessor, Xy_test):
         extreme_auc.append(auc_e)
         print("Extreme")
         print(auc_e)
+        f1_e = np.average(cross_val_score(extreme, X_test, y_test, cv=cv, scoring='f1'))
+        extreme_f1.append(f1_e)
+        print("Extreme")
+        print(f1_e)
 
 
         extreme_std = Pipeline(steps=[('preprocessor', preprocessor),
@@ -314,7 +319,12 @@ if __name__ == "__main__":
 
     '''Use this code to test not to train'''
 
-    test_model(transform(split(df_clean)), split(df_clean))
+    #test_model(transform(oversampling(split(df_clean))), oversampling(split(df_clean)))
+    test_model(transform(oversampling(split(df_clean))), oversampling(split(df_clean)))
+    #test_model(transform(undersampling(split(df_clean))), undersampling(split(df_clean)))
+    #test_model(transform(syntetic_samples(split(df_clean))), syntetic_samples(split(df_clean)))
+    #test_model(transform(syntetic_under(split(df_clean))), syntetic_under(split(df_clean)))
+
     # auc_base = []
     # auc_over = []
     # auc_under = []
@@ -348,16 +358,16 @@ if __name__ == "__main__":
     # print("----------------------|||||||||||-|||||||||||----------------------")
     # print("Original Dataset")
     # modelling(transform(split(df_clean, 'train')), split(df_clean, 'train'))
-    # print("----------------------|||||||||||-|||||||||||----------------------")
-    # print("Oversampled Dataset")
-    # modelling(transform(oversampling(split(df_clean, 'train'))), oversampling(split(df_clean, 'train')))
-    # print("----------------------|||||||||||-|||||||||||----------------------")
-    # print("Undersampled Dataset")
-    # modelling(transform(undersampling(split(df_clean, 'train'))), undersampling(split(df_clean, 'train')))
-    # print("----------------------|||||||||||-|||||||||||----------------------")
-    # print("Syntetic Dataset")
-    # modelling(transform(syntetic_samples(split(df_clean, 'train'))), syntetic_samples(split(df_clean, 'train')))
-    # print("----------------------|||||||||||-|||||||||||----------------------")
-    # print("Syntetic Undersampled Dataset")
-    # modelling(transform(syntetic_under(split(df_clean, 'train'))), syntetic_under(split(df_clean, 'train')))
+    print("----------------------|||||||||||-|||||||||||----------------------")
+    print("Oversampled Dataset")
+    modelling(transform(oversampling(split(df_clean, 'train'))), oversampling(split(df_clean, 'train')))
+    print("----------------------|||||||||||-|||||||||||----------------------")
+    print("Undersampled Dataset")
+    modelling(transform(undersampling(split(df_clean, 'train'))), undersampling(split(df_clean, 'train')))
+    print("----------------------|||||||||||-|||||||||||----------------------")
+    print("Syntetic Dataset")
+    modelling(transform(syntetic_samples(split(df_clean, 'train'))), syntetic_samples(split(df_clean, 'train')))
+    print("----------------------|||||||||||-|||||||||||----------------------")
+    print("Syntetic Undersampled Dataset")
+    modelling(transform(syntetic_under(split(df_clean, 'train'))), syntetic_under(split(df_clean, 'train')))
 

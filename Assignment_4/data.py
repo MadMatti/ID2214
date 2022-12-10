@@ -167,7 +167,7 @@ def univariate_selection(df):
     featureScores = pd.concat([dfcolumns,dfscores],axis=1)
     featureScores.columns = ['Specs','Score']  #naming the dataframe columns
     
-    print(tabulate(featureScores.nlargest(10,'Score'), tablefmt='psql')) # print 10 best features
+    #print(tabulate(featureScores.nlargest(10,'Score'), tablefmt='psql')) # print 10 best features
     return featureScores.nlargest(10, 'Score')
 
 def feature_importance(df):
@@ -180,11 +180,11 @@ def feature_importance(df):
 
     #model = ExtraTreesClassifier()
     model.fit(X,y)
-    print(model[1][1].feature_importances_) #use inbuilt class feature_importances of tree based classifiers
+    #print(model[1][1].feature_importances_) #use inbuilt class feature_importances of tree based classifiers
     #plot graph of feature importances for better visualization
     feat_importances = pd.Series(model[1][1].feature_importances_, index=X.columns)
     feat_importances.nlargest(10).plot(kind='barh')
-    plt.show()
+    #plt.show()
     return feat_importances.nlargest(10)
 
 def correlation_matrix(df):
@@ -198,7 +198,7 @@ def correlation_matrix(df):
     plt.figure(figsize=(20,20))
     #plot heat map
     g=sn.heatmap(df1[top_corr_features].corr(),annot=True,cmap="RdYlGn")
-    plt.show()
+    #plt.show()
 
 def final_selection(all_features):
 
@@ -225,7 +225,7 @@ def final_selection(all_features):
     g=sn.heatmap(final_features[top_corr_features].corr(),annot=True,cmap="RdYlGn")
     plt.xticks(rotation=90)
     plt.yticks(rotation=0)
-    plt.show()
+    #plt.show()
 
     return final_features
 
