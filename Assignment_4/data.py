@@ -13,9 +13,10 @@ from rdkit.Chem import Fragments
 from rdkit.Chem import Lipinski
 from rdkit.Chem import rdMolDescriptors
 
-from sklearn.feature_selection import SelectKBest, chi2, RFECV
+from sklearn.feature_selection import SelectKBest, chi2, RFECV, RFE
 from sklearn.ensemble import ExtraTreesClassifier
 from sklearn.pipeline import Pipeline
+from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
 from sklearn.feature_selection import SelectFromModel
 from sklearn.model_selection import StratifiedKFold
@@ -166,7 +167,7 @@ def univariate_selection(df):
     featureScores = pd.concat([dfcolumns,dfscores],axis=1)
     featureScores.columns = ['Specs','Score']  #naming the dataframe columns
     
-    # print(tabulate(featureScores.nlargest(10,'Score'), tablefmt='psql')) # print 10 best features
+    print(tabulate(featureScores.nlargest(10,'Score'), tablefmt='psql')) # print 10 best features
     return featureScores.nlargest(10, 'Score')
 
 def feature_importance(df):
@@ -183,7 +184,7 @@ def feature_importance(df):
     #plot graph of feature importances for better visualization
     feat_importances = pd.Series(model[1][1].feature_importances_, index=X.columns)
     feat_importances.nlargest(10).plot(kind='barh')
-    # plt.show()
+    plt.show()
     return feat_importances.nlargest(10)
 
 def correlation_matrix(df):
@@ -217,13 +218,14 @@ def final_selection(all_features):
     # now we can drop featuers that are highly correlated
     final_features.drop(['Num_valence_electrons', 'num_heavy_atoms', 'num_bonds', 'num_hetero_atoms', 'NO_count'], axis=1, inplace=True)
 
-    # corrmat = final_features.corr()
-    # top_corr_features = corrmat.index
-    # plt.figure(figsize=(20,20))
-    # #plot heat map
-    # g=sn.heatmap(final_features[top_corr_features].corr(),annot=True,cmap="RdYlGn")
-    # plt.xticks(rotation=90)
-    # plt.show()
+    corrmat = final_features.corr()
+    top_corr_features = corrmat.index
+    plt.figure(figsize=(20,20))
+    #plot heat map
+    g=sn.heatmap(final_features[top_corr_features].corr(),annot=True,cmap="RdYlGn")
+    plt.xticks(rotation=90)
+    plt.yticks(rotation=0)
+    plt.show()
 
     return final_features
 
@@ -236,15 +238,15 @@ def feature_selection(all_features):
     # Selecting the most important features according to ExtraTreesClassifier
     model = Pipeline(steps=[('scaler', StandardScaler()),
                             ('extreme', ExtraTreesClassifier())])
-
-    rfecv_selector = RFECV(estimator=model[1][1], cv=StratifiedKFold(5), scoring='roc_auc', n_jobs=-1, min_features_to_select=10)
-
-
-
-
-
-    
-
+    model.fit(X, y)
+    rfecv_selector = Pipeline(steps=[('scaler', StandardScaler()),
+                    ('rfecv', RFECV(estimator=model[1][1], cv=StratifiedKFold(5), scoring='roc_auc', n_jobs=-1, step=1))])
+    #rfecv_selector = RFECV(estimator=model[1][1], cv=StratifiedKFold(5), scoring='roc_auc', n_jobs=-1, min_features_to_select=10, step=1)
+    rfecv_selector.fit(X, y)
+    features_arr = rfecv_selector.get_feature_names_out().tolist()
+    features_arr.append('ACTIVE')
+    print(features_arr)
+    return all_features[features_arr]
 
     
 def data_analysis(df):
@@ -279,5 +281,6 @@ if __name__ == '__main__':
     # univariate_selection(data_cleaning(features))
     # feature_importance(data_cleaning(features))
     # correlation_matrix(data_cleaning(features))
-    final_selection(data_cleaning(features))
+    #final_selection(data_cleaning(features))
+    feature_selection(data_cleaning(features))
     

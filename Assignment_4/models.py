@@ -14,6 +14,8 @@ from sklearn.metrics import roc_auc_score
 from sklearn.utils import resample
 from sklearn.model_selection import RandomizedSearchCV
 from sklearn.model_selection import StratifiedKFold
+from sklearn.utils import shuffle
+from sklearn.model_selection import cross_val_score
 
 from imblearn.over_sampling import SMOTE
 from imblearn.under_sampling import RandomUnderSampler
@@ -36,10 +38,9 @@ def split(df, which='train'):
     # split into train and test
     y = df['ACTIVE']
     X = df.drop('ACTIVE', axis=1)
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, stratify=y) # R
+    X_train, y_train = shuffle(X, y) # R
 
-    if which == 'train': return X_train, y_train
-    elif which == 'test': return X_test, y_test
+    return X_train, y_train
 
 def oversampling(Xy_train):
     X_train, y_train = Xy_train
@@ -135,29 +136,40 @@ def modelling(preprocessor, Xy_train):
     # print(forest_search.best_score_)
 
     # extreme random forest
+    extreme_parameters = {
+        'extreme__random_state': 20,
+        'extreme__n_estimators': 1400,
+        'extreme__min_samples_split': 12,
+        'extreme__min_samples_leaf': 4,
+        'extreme__max_features': 'sqrt',
+        'extreme__max_depth': 10,
+        'extreme__bootstrap': True
+    }
+
     extreme = Pipeline(steps=[('preprocessor', preprocessor),
                                 ('scaler', StandardScaler()),
-                                ('extreme', ExtraTreesClassifier())]) # R
+                                ('extreme', ExtraTreesClassifier(random_state=20, n_estimators=1400, min_samples_split=12, min_samples_leaf=4, 
+                                                                 max_features='sqrt', max_depth=10, bootstrap=True))]) # R
     
     extreme.fit(X_train, y_train)
     models["Extreme Random Forest"] = extreme
 
     
 
-    params_extreme = { 
-        'extreme__bootstrap': [True, False],
-        'extreme__max_depth': [10, 20, 30, 40, 45, 50, 55, 60, 65, 70, 75, 80, 90, 100, None],
-        'extreme__max_features': ['sqrt', 'log2'],
-        'extreme__min_samples_leaf': [1, 2, 3, 4],
-        'extreme__min_samples_split': [2, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-        'extreme__n_estimators': [200, 600, 800, 850, 875, 900, 950, 975, 1000, 1100, 1200, 1400, 1600, 1800, 2000, 2200, 2400],
-        'extreme__random_state': [1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, None],
-    }
+    # params_extreme = { 
+    #     'extreme__bootstrap': [True, False],
+    #     'extreme__max_depth': [10, 20, 30, 40, 45, 50, 55, 60, 65, 70, 75, 80, 90, 100, None],
+    #     'extreme__max_features': ['sqrt', 'log2'],
+    #     'extreme__min_samples_leaf': [1, 2, 3, 4],
+    #     'extreme__min_samples_split': [2, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+    #     'extreme__n_estimators': [200, 600, 800, 850, 875, 900, 950, 975, 1000, 1100, 1200, 1400, 1600, 1800, 2000, 2200, 2400],
+    #     'extreme__random_state': [1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, None],
+    # }
 
-    extreme_search = RandomizedSearchCV(extreme, param_distributions=params_extreme, n_iter=240, verbose=1, n_jobs=-1, cv=cv, scoring='roc_auc')
-    extreme_search.fit(X_train, y_train)
-    print(extreme_search.best_params_)
-    print(extreme_search.best_score_)
+    # extreme_search = RandomizedSearchCV(extreme, param_distributions=params_extreme, n_iter=240, verbose=1, n_jobs=-1, cv=cv, scoring='roc_auc')
+    # extreme_search.fit(X_train, y_train)
+    # print(extreme_search.best_params_)
+    # print(extreme_search.best_score_)
 
     return models
 
@@ -237,6 +249,45 @@ def test_models(models, Xy_test):
         print(auc)
 
     return auc_list
+
+def test_model(preprocessor, Xy_test):
+    X_test, y_test = Xy_test
+    extreme_auc = []
+    extreme_std_auc = []
+
+    for i in range(100):
+        X_test, y_test = shuffle(X_test, y_test)
+        cv = StratifiedKFold(n_splits=5, shuffle=True)
+        print(i)
+
+        extreme = Pipeline(steps=[('preprocessor', preprocessor),
+                                    ('scaler', StandardScaler()),
+                                    ('extreme', ExtraTreesClassifier(random_state=20, n_estimators=1400, min_samples_split=12, min_samples_leaf=4, 
+                                                                    max_features='sqrt', max_depth=10, bootstrap=True))]) # R
+
+        auc_e = np.average(cross_val_score(extreme, X_test, y_test, cv=cv, scoring='roc_auc'))
+        extreme_auc.append(auc_e)
+        print("Extreme")
+        print(auc_e)
+
+
+        extreme_std = Pipeline(steps=[('preprocessor', preprocessor),
+                                    ('scaler', StandardScaler()),
+                                    ('extreme', ExtraTreesClassifier())]) # R
+
+        auc_e_std = np.average(cross_val_score(extreme_std, X_test, y_test, cv=cv, scoring='roc_auc'))
+        extreme_std_auc.append(auc_e_std)
+        print("Extreme STD")
+        print(auc_e_std)
+
+
+
+    print("Extreme AUC:")
+    print(np.mean(extreme_auc))
+    print("Extreme STD AUC:")
+    print(np.mean(extreme_std_auc))
+    
+
         
     
 
@@ -247,6 +298,7 @@ if __name__ == "__main__":
     df = load_data()
     features = pd.read_csv('Assignment_4/resources/all_features.csv', index_col=0)
     df_feat = final_selection(data_cleaning(features))
+    #df_feat = feature_selection(data_cleaning(features))
     df_clean = data_cleaning(df_feat)
     # print("AUC score base")
     # test_models(modelling(transform(split(df_clean, 'train')), split(df_clean, 'train')), split(df_clean, 'test'))
@@ -261,6 +313,8 @@ if __name__ == "__main__":
 
 
     '''Use this code to test not to train'''
+
+    test_model(transform(split(df_clean)), split(df_clean))
     # auc_base = []
     # auc_over = []
     # auc_under = []
@@ -291,19 +345,19 @@ if __name__ == "__main__":
     #     print(np.mean(AUC_models[model]))
 
     '''Use this code to train'''
-    print("----------------------|||||||||||-|||||||||||----------------------")
-    print("Original Dataset")
-    modelling(transform(split(df_clean, 'train')), split(df_clean, 'train'))
-    print("----------------------|||||||||||-|||||||||||----------------------")
-    print("Oversampled Dataset")
-    modelling(transform(oversampling(split(df_clean, 'train'))), oversampling(split(df_clean, 'train')))
-    print("----------------------|||||||||||-|||||||||||----------------------")
-    print("Undersampled Dataset")
-    modelling(transform(undersampling(split(df_clean, 'train'))), undersampling(split(df_clean, 'train')))
-    print("----------------------|||||||||||-|||||||||||----------------------")
-    print("Syntetic Dataset")
-    modelling(transform(syntetic_samples(split(df_clean, 'train'))), syntetic_samples(split(df_clean, 'train')))
-    print("----------------------|||||||||||-|||||||||||----------------------")
-    print("Syntetic Undersampled Dataset")
-    modelling(transform(syntetic_under(split(df_clean, 'train'))), syntetic_under(split(df_clean, 'train')))
+    # print("----------------------|||||||||||-|||||||||||----------------------")
+    # print("Original Dataset")
+    # modelling(transform(split(df_clean, 'train')), split(df_clean, 'train'))
+    # print("----------------------|||||||||||-|||||||||||----------------------")
+    # print("Oversampled Dataset")
+    # modelling(transform(oversampling(split(df_clean, 'train'))), oversampling(split(df_clean, 'train')))
+    # print("----------------------|||||||||||-|||||||||||----------------------")
+    # print("Undersampled Dataset")
+    # modelling(transform(undersampling(split(df_clean, 'train'))), undersampling(split(df_clean, 'train')))
+    # print("----------------------|||||||||||-|||||||||||----------------------")
+    # print("Syntetic Dataset")
+    # modelling(transform(syntetic_samples(split(df_clean, 'train'))), syntetic_samples(split(df_clean, 'train')))
+    # print("----------------------|||||||||||-|||||||||||----------------------")
+    # print("Syntetic Undersampled Dataset")
+    # modelling(transform(syntetic_under(split(df_clean, 'train'))), syntetic_under(split(df_clean, 'train')))
 
