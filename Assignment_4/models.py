@@ -12,16 +12,17 @@ from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import roc_auc_score
 from sklearn.utils import resample
-from sklearn.model_selection import RandomizedSearchCV
+from sklearn.model_selection import RandomizedSearchCV, GridSearchCV
 from sklearn.model_selection import StratifiedKFold
 from sklearn.utils import shuffle
 from sklearn.model_selection import cross_val_score
 
 from imblearn.over_sampling import SMOTE
 from imblearn.under_sampling import RandomUnderSampler
-from imblearn.pipeline import Pipeline
+from imblearn.pipeline import Pipeline, make_pipeline
 
 from sklearn.ensemble import RandomForestClassifier, ExtraTreesClassifier, GradientBoostingClassifier, AdaBoostClassifier, VotingClassifier
+from sklearn.tree import DecisionTreeClassifier
 from sklearn.svm import SVC 
 from sklearn.linear_model import LogisticRegression
 from sklearn.naive_bayes import GaussianNB
@@ -38,7 +39,7 @@ def split(df):
     # split into train and test
     y = df['ACTIVE']
     X = df.drop('ACTIVE', axis=1)
-    X_train, y_train = shuffle(X, y) # R
+    X_train, y_train = shuffle(X, y, random_state=R) # R
 
     return X_train, y_train
 
@@ -97,10 +98,12 @@ def transform(Xy_train):
 
     num_features = X_train.select_dtypes(include=['float64']).columns
     cat_features = X_train.select_dtypes(include=['object', 'bool']).columns
-    categorical_transformer = Pipeline(steps=[('imputer', SimpleImputer(strategy='constant', fill_value="missing")),
-                                              ('encoder', OrdinalEncoder(handle_unknown='use_encoded_value', unknown_value=-1))])
-    numeric_transformer = Pipeline(steps=[('imputer', SimpleImputer(strategy='median')),
-                                          ('pca', PCA(n_components=None))])
+    categorical_transformer = Pipeline(steps=[
+                                      ('imputer', SimpleImputer(strategy='constant', fill_value="missing")),
+                                      ('encoder', OrdinalEncoder(handle_unknown='use_encoded_value', unknown_value=-1))])
+    numeric_transformer = Pipeline(steps=[
+                                  ('imputer', SimpleImputer(strategy='median')),
+                                  ('pca', PCA(n_components=0.95))])
     preprocessor = ColumnTransformer(transformers=[('num', numeric_transformer, num_features), 
                                     ('cat', categorical_transformer, cat_features)])
     
@@ -255,6 +258,10 @@ def test_model(preprocessor, Xy_test):
     extreme_auc = []
     extreme_std_auc = []
     extreme_f1 = []
+    tree_auc = []
+    tree_f1 = []
+    logistic_auc = []
+    logistic_f1 = []
 
     for i in range(100):
         X_test, y_test = shuffle(X_test, y_test)
@@ -263,34 +270,77 @@ def test_model(preprocessor, Xy_test):
 
         extreme = Pipeline(steps=[('preprocessor', preprocessor),
                                     ('scaler', StandardScaler()),
-                                    ('extreme', ExtraTreesClassifier(random_state=20, n_estimators=1400, min_samples_split=12, min_samples_leaf=4, 
-                                                                    max_features='sqrt', max_depth=10, bootstrap=True))]) # R
+                                    ('extreme', ExtraTreesClassifier(n_estimators=1000, min_samples_split=8, min_samples_leaf=2, 
+                                                                    max_features='sqrt', max_depth=55, bootstrap=False, class_weight='balanced'))]) # R
 
         auc_e = np.average(cross_val_score(extreme, X_test, y_test, cv=cv, scoring='roc_auc'))
         extreme_auc.append(auc_e)
-        print("Extreme")
+        print("Extreme AUC")
         print(auc_e)
         f1_e = np.average(cross_val_score(extreme, X_test, y_test, cv=cv, scoring='f1'))
         extreme_f1.append(f1_e)
-        print("Extreme")
+        print("Extreme F1")
         print(f1_e)
 
+        # tree = Pipeline(steps=[('preprocessor', preprocessor),
+        #                             ('scaler', StandardScaler()),
+        #                             ('tree', DecisionTreeClassifier(class_weight='balanced'))]) # R
 
-        extreme_std = Pipeline(steps=[('preprocessor', preprocessor),
+        # auc_t = np.average(cross_val_score(tree, X_test, y_test, cv=cv, scoring='roc_auc'))
+        # tree_auc.append(auc_t)
+        # print("Tree AUC")
+        # print(auc_t)
+        # f1_t = np.average(cross_val_score(tree, X_test, y_test, cv=cv, scoring='f1'))
+        # extreme_f1.append(f1_t)
+        # print("Tree F1")
+        # print(f1_t)
+
+        extra_base = Pipeline(steps=[('preprocessor', preprocessor),
                                     ('scaler', StandardScaler()),
-                                    ('extreme', ExtraTreesClassifier())]) # R
+                                    ('e_base', LogisticRegression(class_weight='balanced'))]) # R
 
-        auc_e_std = np.average(cross_val_score(extreme_std, X_test, y_test, cv=cv, scoring='roc_auc'))
-        extreme_std_auc.append(auc_e_std)
-        print("Extreme STD")
-        print(auc_e_std)
-
+        auc_l = np.average(cross_val_score(extra_base, X_test, y_test, cv=cv, scoring='roc_auc'))
+        logistic_auc.append(auc_l)
+        print("Extra_base AUC")
+        print(auc_l)
+        f1_l = np.average(cross_val_score(extra_base, X_test, y_test, cv=cv, scoring='f1'))
+        logistic_f1.append(f1_l)
+        print("Extra_base F1")
+        print(f1_l)
 
 
     print("Extreme AUC:")
     print(np.mean(extreme_auc))
     print("Extreme STD AUC:")
     print(np.mean(extreme_std_auc))
+
+
+def upsampling(preprocessor, Xy):
+    X, y = Xy
+    cv = StratifiedKFold(n_splits=5, shuffle=True)
+
+    imba_pipeline = make_pipeline(preprocessor,
+                                  StandardScaler(),
+                                  SMOTE(random_state=42), 
+                                  ExtraTreesClassifier(n_estimators=100, random_state=13))
+    cross_val_score(imba_pipeline, X, y, scoring='roc_auc', cv=cv)
+
+    params = {
+        'extratreesclassifier__n_estimators': [100, 200, 300, 400, 500, 800, 1000, 1400],
+        'extratreesclassifier__max_depth': [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 80, None],
+        'extratreesclassifier__min_samples_split': [2, 4, 6, 8, 10],
+        'extratreesclassifier__min_samples_leaf': [1, 2, 4, 6, 8, 10],
+        'extratreesclassifier__max_features': ['auto', 'sqrt', 'log2'],
+        'extratreesclassifier__bootstrap': [True, False]
+    }
+
+    grid_imba = RandomizedSearchCV(imba_pipeline, param_distributions=params, cv=cv, scoring='roc_auc', verbose=3, n_jobs=-1, n_iter=20)
+    grid_imba.fit(X, y)
+
+    print("Best parameters:", grid_imba.best_params_)
+    print("Best score:", grid_imba.best_score_)
+
+
     
 
         
@@ -316,11 +366,12 @@ if __name__ == "__main__":
     # print("AUC score syntetic undersampled")
     # test_models(modelling(transform(syntetic_under(split(df_clean, 'train'))), syntetic_under(split(df_clean, 'train'))), split(df_clean, 'test'))
 
+    upsampling(transform(split(df_clean)), split(df_clean))
 
     '''Use this code to test not to train'''
 
-    #test_model(transform(oversampling(split(df_clean))), oversampling(split(df_clean)))
-    test_model(transform(oversampling(split(df_clean))), oversampling(split(df_clean)))
+    #test_model(transform(split(df_clean)), split(df_clean))
+    #test_model(transform((split(df_clean))), (split(df_clean)))
     #test_model(transform(undersampling(split(df_clean))), undersampling(split(df_clean)))
     #test_model(transform(syntetic_samples(split(df_clean))), syntetic_samples(split(df_clean)))
     #test_model(transform(syntetic_under(split(df_clean))), syntetic_under(split(df_clean)))

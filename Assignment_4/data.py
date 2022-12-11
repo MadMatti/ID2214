@@ -215,8 +215,13 @@ def final_selection(all_features):
     # now check the correlation matrix of this features
     final_features = all_features[final_list] # df with only wanted features
 
+    #split fingerprint per bit 
+    df_fingerprints = final_features['morgan_fp'].str.split('', expand=True)
+    final_features = pd.concat([final_features,df_fingerprints],axis=1)
+    final_features.columns = final_features.columns.astype(str)
+
     # now we can drop featuers that are highly correlated
-    final_features.drop(['Num_valence_electrons', 'num_heavy_atoms', 'num_bonds', 'num_hetero_atoms', 'NO_count'], axis=1, inplace=True)
+    final_features.drop(['Num_valence_electrons', 'num_heavy_atoms', 'num_bonds', 'num_hetero_atoms', 'NO_count', 'morgan_fp'], axis=1, inplace=True)
 
     corrmat = final_features.corr()
     top_corr_features = corrmat.index
