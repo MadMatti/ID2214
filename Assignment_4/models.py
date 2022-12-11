@@ -1,3 +1,4 @@
+from os import linesep
 import pandas as pd
 import numpy as np
 
@@ -10,12 +11,12 @@ from sklearn.preprocessing import OrdinalEncoder
 from sklearn.compose import ColumnTransformer
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import roc_auc_score
+from sklearn.metrics import roc_auc_score, classification_report
 from sklearn.utils import resample
 from sklearn.model_selection import RandomizedSearchCV, GridSearchCV
 from sklearn.model_selection import StratifiedKFold
 from sklearn.utils import shuffle
-from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import cross_val_score, cross_val_predict
 
 from skopt import BayesSearchCV
 
@@ -252,8 +253,8 @@ def test_model(preprocessor, Xy_test):
 
         extreme = Pipeline(steps=[('preprocessor', preprocessor),
                                     ('scaler', StandardScaler()),
-                                    ('extreme', ExtraTreesClassifier(n_estimators=1400, min_samples_split=8, min_samples_leaf=4, 
-                                                                    max_features='sqrt', max_depth=80, bootstrap=True, class_weight='balanced'))]) # R
+                                    ('extreme', ExtraTreesClassifier(n_estimators=1462, min_samples_split=14, min_samples_leaf=1, 
+                                                                    max_features='sqrt', max_depth=200, bootstrap=False, class_weight='balanced'))]) # R
 
         score = (cross_val_score(extreme, X_test, y_test, cv=cv, scoring='roc_auc'))
         extreme_auc.append(score.mean())
@@ -294,6 +295,33 @@ def upsampling(preprocessor, Xy):
     print("Best parameters:", grid_imba.best_params_)
     print("Best score:", grid_imba.best_score_)
 
+def predict(model, X,y, file, feat_file):
+    cv_test = StratifiedKFold(n_splits=5, shuffle=True, random_state=(R+1))
+
+    auc = cross_val_score(model, X, y, cv=cv_test, scoring='roc_auc').mean()
+
+    y_pred = cross_val_predict(model, X, y, cv=cv_test, n_jobs=-1)
+    print(classification_report(y, y_pred))
+
+    predictor = model
+    predictor.fit(X, y)
+
+    df_eval = pd.read_csv(file, index_col=0)
+    features = pd.read_csv(feat_file, index_col=0)
+    df_eval = data_cleaning(final_selection(data_cleaning(features)))
+
+    predictions = predictor.predict_proba(df_eval)
+
+    OUT_FILE = 'programming_challenge/resources/labels.txt'
+
+    with open(OUT_FILE, 'w') as f:
+        f.write(auc + linesep)
+        for prediction in predictions:
+            f.write(prediction + linesep)
+
+
+
+
 
     
 
@@ -310,10 +338,10 @@ if __name__ == "__main__":
     df_clean = data_cleaning(df_feat)
 
     '''Use this code to train'''
-    upsampling(transform(split(df_clean)), split(df_clean))
+    #upsampling(transform(split(df_clean)), split(df_clean))
 
     '''Use this code to test not to train'''
-    #test_model(transform(split(df_clean)), split(df_clean))
+    test_model(transform(split(df_clean)), split(df_clean))
 
 
 
