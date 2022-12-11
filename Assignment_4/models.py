@@ -118,29 +118,6 @@ def modelling(preprocessor, Xy_train):
 
     models = {}
 
-    # # random forest
-    # forest = Pipeline(steps=[('preprocessor', preprocessor),
-    #                             ('scaler', StandardScaler()),
-    #                             ('forest', RandomForestClassifier())]) # R
-
-    # forest.fit(X_train, y_train)
-    # models["Random Forest"] = forest
-
-    # params_forest = { 
-    # 'forest__bootstrap': [True, False],
-    # 'forest__max_depth': [10, 20, 30, 40, 45, 50, 55, 60, 65, 70, 75, 80, 90, 100, None],
-    # 'forest__max_features': ['sqrt', 'log2'],
-    # 'forest__min_samples_leaf': [1, 2, 3, 4],
-    # 'forest__min_samples_split': [2, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-    # 'forest__n_estimators': [200, 600, 800, 850, 875, 900, 950, 975, 1000, 1100, 1200, 1400, 1600, 1800, 2000, 2200, 2400],
-    # }
-
-    # forest_search = RandomizedSearchCV(estimator=forest, param_distributions=params_forest, n_iter=10, verbose=1, n_jobs=-1, cv=cv, scoring='roc_auc')
-    # forest_search.fit(X_train, y_train)
-    # print("Params and score for Random Forest")
-    # print(forest_search.best_params_)
-    # print(forest_search.best_score_)
-
     # extreme random forest
     extreme_parameters = {
         'extreme__random_state': 20,
@@ -160,86 +137,9 @@ def modelling(preprocessor, Xy_train):
     extreme.fit(X_train, y_train)
     models["Extreme Random Forest"] = extreme
 
-    
+    return extreme
+    #return models
 
-    params_extreme = { 
-        'extreme__bootstrap': [True, False],
-        'extreme__max_depth': [10, 20, 30, 40, 45, 50, 55, 60, 65, 70, 75, 80, 90, 100, None],
-        'extreme__max_features': ['sqrt', 'log2'],
-        'extreme__min_samples_leaf': [1, 2, 3, 4,5,6,7,8,9,10],
-        'extreme__min_samples_split': [2, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 17, 19, 21, 23, 25],
-        'extreme__n_estimators': [100, 200, 400, 600, 800, 850, 875, 900, 950, 975, 1000, 1100, 1200, 1400, 1600, 1800, 2000, 2200, 2400],
-        'extreme__random_state': [1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, None],
-    }
-
-    extreme_search = RandomizedSearchCV(extreme, param_distributions=params_extreme, n_iter=20, verbose=1, n_jobs=-1, cv=cv, scoring='roc_auc')
-    extreme_search.fit(X_train, y_train)
-    print(extreme_search.best_params_)
-    print(extreme_search.best_score_)
-
-    return models
-
-    # SVM
-    # svm = Pipeline(steps=[('preprocessor', preprocessor),
-    #                         ('scaler', StandardScaler()),
-    #                         ('classifier', SVC(random_state=R, probability=True))])
-    
-    # svm.fit(X_train, y_train)
-    # models["SVM"] = svm
-    # print("Done")
-
-    # gradient boosting
-    gboost = Pipeline(steps=[('preprocessor', preprocessor),
-                            ('scaler', StandardScaler()),
-                            ('classifier', GradientBoostingClassifier())]) # R
-    
-    gboost.fit(X_train, y_train)
-    models["Gradient Boosting"] = gboost
-
-    # logistic regression
-    logreg = Pipeline(steps=[('preprocessor', preprocessor),
-                            ('scaler', StandardScaler()),
-                            ('classifier', LogisticRegression())]) # R
-
-    logreg.fit(X_train, y_train)
-    models["Logistic Regression"] = logreg
-
-    # bayes
-    bayes = Pipeline(steps=[('preprocessor', preprocessor),
-                            ('scaler', StandardScaler()),
-                            ('classifier', GaussianNB())])
-
-    bayes.fit(X_train, y_train)
-    models["Bayes"] = bayes
-
-    return models
-    # adaboost
-    adaboost = Pipeline(steps=[('preprocessor', preprocessor),
-                            ('scaler', StandardScaler()),
-                            ('classifier', AdaBoostClassifier(random_state=R))])
-
-    adaboost.fit(X_train, y_train)
-    models["Adaboost"] = adaboost
-
-    # ensemble
-    forest_e = RandomForestClassifier(random_state=R, n_estimators=1600, min_samples_split=11, 
-                                        min_samples_leaf=1, max_features='log2', max_depth=100, bootstrap=True)
-    
-    gradient_e = GradientBoostingClassifier(random_state=R, n_estimators=75, max_depth=5, learning_rate=0.2)
-    bayes_e = GaussianNB()
-    extreme_forest_e2 = ExtraTreesClassifier(random_state=900, n_estimators=975, min_samples_split=5, 
-                                            min_samples_leaf=1, max_features='sqrt', max_depth=40, bootstrap=False)
-
-    estimators = [('forest', forest_e), ('bayes', bayes_e), ('gradient', gradient_e), ('extreme', extreme_forest_e2)]
-
-    ensemble = Pipeline(steps=[('preprocessor', preprocessor), ('standardscaler', StandardScaler()), 
-                                ('ens', VotingClassifier(estimators=estimators, voting='soft'))])
-
-    ensemble.fit(X_train, y_train)
-    models["Ensemble"] = ensemble
-    
-    
-    return models
 
 def test_model(preprocessor, Xy_test):
     X_test, y_test = Xy_test
@@ -256,11 +156,11 @@ def test_model(preprocessor, Xy_test):
                                     ('extreme', ExtraTreesClassifier(n_estimators=1462, min_samples_split=14, min_samples_leaf=1, 
                                                                     max_features='sqrt', max_depth=200, bootstrap=False, class_weight='balanced'))]) # R
 
-        score = (cross_val_score(extreme, X_test, y_test, cv=cv, scoring='roc_auc'))
+        score = (cross_val_score(extreme, X_test, y_test, cv=cv, scoring='roc_auc', n_jobs=-1))
         extreme_auc.append(score.mean())
         print("Extreme AUC")
         print(score.mean(), score.std())
-        f1_e = cross_val_score(extreme, X_test, y_test, cv=cv, scoring='f1').mean()
+        f1_e = cross_val_score(extreme, X_test, y_test, cv=cv, scoring='f1', n_jobs=-1).mean()
         extreme_f1.append(f1_e)
         print("Extreme F1")
         print(f1_e)
@@ -332,6 +232,7 @@ def predict(model, X,y, file, feat_file):
 
 
 if __name__ == "__main__":
+    test_file = 'Assignment_4/resources/test_smiles.csv'
     df = load_data()
     features = pd.read_csv('Assignment_4/resources/all_features.csv', index_col=0)
     df_feat = final_selection(data_cleaning(features))
@@ -342,6 +243,9 @@ if __name__ == "__main__":
 
     '''Use this code to test not to train'''
     test_model(transform(split(df_clean)), split(df_clean))
+
+    '''Use this code to predict'''
+    predict(modelling(), X=split(df_clean)[0], y=split(df_clean)[1], file=test_file, feat_file=features)
 
 
 

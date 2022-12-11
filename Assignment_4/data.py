@@ -253,6 +253,12 @@ def feature_selection(all_features):
     print(features_arr)
     return all_features[features_arr]
 
+def selection_prediction(filename):
+    df = pd.read_csv(filename, index_col=0)
+
+    df['mol'] = df['SMILES'].apply(rdkit.Chem.MolFromSmiles)
+    df.drop('SMILES', axis=1, inplace=True)
+
     
 def data_analysis(df):
     # check correlation among features
