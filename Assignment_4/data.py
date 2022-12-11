@@ -259,6 +259,29 @@ def selection_prediction(filename):
     df['mol'] = df['SMILES'].apply(rdkit.Chem.MolFromSmiles)
     df.drop('SMILES', axis=1, inplace=True)
 
+    # extract features
+    df['NHOH_count'] = df['mol'].apply(lambda x: Lipinski.NHOHCount(x))
+    df['benzene'] = df['mol'].apply(lambda x: Fragments.fr_benzene(x))
+    df['exact_mol_wt'] = df['mol'].apply(lambda x: Descriptors.ExactMolWt(x))
+    df['num_atoms'] = df['mol'].apply(lambda x: x.GetNumAtoms())
+    df['amide'] = df['mol'].apply(lambda x: Fragments.fr_amide(x))
+    df['num_H_acceptors'] = df['mol'].apply(lambda x: Lipinski.NumHAcceptors(x))
+    df['num_rotatable_bonds'] = df['mol'].apply(lambda x: rdMolDescriptors.CalcNumRotatableBonds(x))
+    df['num_aromatic_rings'] = df['mol'].apply(lambda x: rdMolDescriptors.CalcNumAromaticRings(x))
+    df['Ar_N'] = df['mol'].apply(lambda x: Fragments.fr_Ar_N(x))
+    df['morgan_fp'] = df['mol'].apply(lambda x: AllChem.GetMorganFingerprintAsBitVect(x,2,nBits=124))
+    # convert morgan_fp to string
+    df['morgan_fp'] = df['morgan_fp'].apply(lambda x: x.ToBitString())
+    #split fingerprint per bit 
+    df_bits = df['morgan_fp'].str.split('', expand=True)
+    df = pd.concat([df,df_bits],axis=1)
+    df.columns = df.columns.astype(str)
+
+    df.drop(['mol', 'morgan_fp'], axis=1, inplace=True)
+
+    return df
+
+
     
 def data_analysis(df):
     # check correlation among features
