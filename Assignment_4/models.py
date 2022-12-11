@@ -131,8 +131,8 @@ def modelling(preprocessor, Xy_train):
 
     extreme = Pipeline(steps=[('preprocessor', preprocessor),
                                 ('scaler', StandardScaler()),
-                                ('extreme', ExtraTreesClassifier(random_state=20, n_estimators=1400, min_samples_split=12, min_samples_leaf=4, 
-                                                                 max_features='sqrt', max_depth=10, bootstrap=True))]) # R
+                                ('extreme', ExtraTreesClassifier(n_estimators=1462, min_samples_split=14, min_samples_leaf=1, 
+                                                                    max_features='sqrt', max_depth=200, bootstrap=False))]) # R
     
     extreme.fit(X_train, y_train)
     models["Extreme Random Forest"] = extreme
@@ -154,7 +154,7 @@ def test_model(preprocessor, Xy_test):
         extreme = Pipeline(steps=[('preprocessor', preprocessor),
                                     ('scaler', StandardScaler()),
                                     ('extreme', ExtraTreesClassifier(n_estimators=1462, min_samples_split=14, min_samples_leaf=1, 
-                                                                    max_features='sqrt', max_depth=200, bootstrap=False, class_weight='balanced'))]) # R
+                                                                    max_features='sqrt', max_depth=200, bootstrap=False))]) # R
 
         score = (cross_val_score(extreme, X_test, y_test, cv=cv, scoring='roc_auc', n_jobs=-1))
         extreme_auc.append(score.mean())
