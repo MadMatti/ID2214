@@ -11,7 +11,7 @@ from sklearn.preprocessing import OrdinalEncoder
 from sklearn.compose import ColumnTransformer
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import roc_auc_score, classification_report
+from sklearn.metrics import roc_auc_score, classification_report, roc_curve, RocCurveDisplay
 from sklearn.utils import resample
 from sklearn.model_selection import RandomizedSearchCV, GridSearchCV
 from sklearn.model_selection import StratifiedKFold
@@ -131,8 +131,9 @@ def modelling(preprocessor, Xy_train):
 
     extreme = Pipeline(steps=[('preprocessor', preprocessor),
                                 ('scaler', StandardScaler()),
+                                ('smote', SMOTE(n_jobs=-1)),
                                 ('extreme', ExtraTreesClassifier(n_estimators=1462, min_samples_split=14, min_samples_leaf=1, 
-                                                                    max_features='sqrt', max_depth=200, bootstrap=False))]) # R
+                                                                 max_features='sqrt', max_depth=200, bootstrap=False, n_jobs=-1))]) # R
     
     extreme.fit(X_train, y_train)
     models["Extreme Random Forest"] = extreme
@@ -153,8 +154,9 @@ def test_model(preprocessor, Xy_test):
 
         extreme = Pipeline(steps=[('preprocessor', preprocessor),
                                     ('scaler', StandardScaler()),
+                                    ('smote', SMOTE(n_jobs=-1)),
                                     ('extreme', ExtraTreesClassifier(n_estimators=1462, min_samples_split=14, min_samples_leaf=1, 
-                                                                    max_features='sqrt', max_depth=200, bootstrap=False, class_weight='balanced'))]) # R
+                                                                     max_features='sqrt', max_depth=200, bootstrap=False, n_jobs=-1))]) # R
 
         score = (cross_val_score(extreme, X_test, y_test, cv=cv, scoring='roc_auc', n_jobs=-1))
         extreme_auc.append(score.mean())
@@ -169,6 +171,8 @@ def test_model(preprocessor, Xy_test):
     print("Extreme AUC:")
     print(np.mean(extreme_auc))
 
+    return extreme
+
 
 def upsampling(preprocessor, Xy):
     X, y = Xy
@@ -176,8 +180,8 @@ def upsampling(preprocessor, Xy):
 
     imba_pipeline = make_pipeline(preprocessor,
                                   StandardScaler(),
-                                  SMOTE(random_state=42), 
-                                  ExtraTreesClassifier(random_state=13))
+                                  SMOTE(random_state=42, n_jobs=-1), 
+                                  ExtraTreesClassifier(random_state=13, n_jobs=-1))
     cross_val_score(imba_pipeline, X, y, scoring='roc_auc', cv=cv)
 
     params_b = {
@@ -199,12 +203,17 @@ def predict(model, X,y, features):
     cv_test = StratifiedKFold(n_splits=5, shuffle=True, random_state=(R+1))
 
     auc = cross_val_score(model, X, y, cv=cv_test, scoring='roc_auc').mean()
+    print("AUC: ", auc)
 
     y_pred = cross_val_predict(model, X, y, cv=cv_test, n_jobs=-1)
     print(classification_report(y, y_pred))
 
+    fpr, tpr, thresholds = roc_curve(y, y_pred)
+    RocCurveDisplay(fpr=fpr, tpr=tpr).plot()
+    plt.show()
+
+
     predictor = model
-    predictor.fit(X, y)
 
     df_eval = features
 
@@ -215,7 +224,7 @@ def predict(model, X,y, features):
     with open(OUT_FILE, 'w') as f:
         f.write(str(auc) + linesep)
         for prediction in predictions:
-            f.write(str(prediction) + linesep)
+            f.write(str(prediction[1]) + linesep)
 
 
 
@@ -244,7 +253,7 @@ if __name__ == "__main__":
 
     '''Use this code to predict'''
     eval_features = selection_prediction(test_file)
-    predict(modelling(transform(split(df_clean)), split(df_clean)), X=split(df_clean)[0], y=split(df_clean)[1], features=eval_features)
+    predict(upsampling(transform(split(df_clean)), split(df_clean)), X=split(df_clean)[0], y=split(df_clean)[1], features=eval_features)
 
 
 
