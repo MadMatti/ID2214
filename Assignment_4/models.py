@@ -154,7 +154,7 @@ def test_model(preprocessor, Xy_test):
         extreme = Pipeline(steps=[('preprocessor', preprocessor),
                                     ('scaler', StandardScaler()),
                                     ('extreme', ExtraTreesClassifier(n_estimators=1462, min_samples_split=14, min_samples_leaf=1, 
-                                                                    max_features='sqrt', max_depth=200, bootstrap=False))]) # R
+                                                                    max_features='sqrt', max_depth=200, bootstrap=False, class_weight='balanced'))]) # R
 
         score = (cross_val_score(extreme, X_test, y_test, cv=cv, scoring='roc_auc', n_jobs=-1))
         extreme_auc.append(score.mean())
@@ -180,16 +180,16 @@ def upsampling(preprocessor, Xy):
                                   ExtraTreesClassifier(random_state=13))
     cross_val_score(imba_pipeline, X, y, scoring='roc_auc', cv=cv)
 
-    params = {
-        'extratreesclassifier__n_estimators': (100, 2000),
-        'extratreesclassifier__max_depth': (5, 200),
-        'extratreesclassifier__min_samples_split': (1, 15),
-        'extratreesclassifier__min_samples_leaf': (1, 30),
+    params_b = {
+        'extratreesclassifier__n_estimators': (100, 5000),
+        'extratreesclassifier__max_depth': (5, 1000),
+        'extratreesclassifier__min_samples_split': (2, 20),
+        'extratreesclassifier__min_samples_leaf': (1, 40),
         'extratreesclassifier__max_features': ['sqrt', 'log2'],
         'extratreesclassifier__bootstrap': [True, False]
     }
 
-    grid_imba = BayesSearchCV(imba_pipeline, search_spaces=params, cv=cv, scoring='roc_auc', verbose=3, n_jobs=-1, n_iter=20)
+    grid_imba = BayesSearchCV(imba_pipeline, search_spaces=params_b, cv=cv, scoring='roc_auc', verbose=3, n_jobs=-1, n_iter=100)
     grid_imba.fit(X, y)
 
     print("Best parameters:", grid_imba.best_params_)
@@ -210,7 +210,7 @@ def predict(model, X,y, file, features):
 
     predictions = predictor.predict_proba(df_eval)
 
-    OUT_FILE = 'programming_challenge/resources/labels.txt'
+    OUT_FILE = 'Assignment_4/resources/9.txt'
 
     with open(OUT_FILE, 'w') as f:
         f.write(auc + linesep)
@@ -237,7 +237,7 @@ if __name__ == "__main__":
     df_clean = data_cleaning(df_feat)
 
     '''Use this code to train'''
-    #upsampling(transform(split(df_clean)), split(df_clean))
+    upsampling(transform(split(df_clean)), split(df_clean))
 
     '''Use this code to test not to train'''
     test_model(transform(split(df_clean)), split(df_clean))
