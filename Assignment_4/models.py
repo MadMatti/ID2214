@@ -181,10 +181,10 @@ def upsampling(preprocessor, Xy):
     cross_val_score(imba_pipeline, X, y, scoring='roc_auc', cv=cv)
 
     params_b = {
-        'extratreesclassifier__n_estimators': (100, 5000),
-        'extratreesclassifier__max_depth': (5, 1000),
-        'extratreesclassifier__min_samples_split': (2, 20),
-        'extratreesclassifier__min_samples_leaf': (1, 40),
+        'extratreesclassifier__n_estimators': (100, 2500),
+        'extratreesclassifier__max_depth': (5, 500),
+        'extratreesclassifier__min_samples_split': (2, 15),
+        'extratreesclassifier__min_samples_leaf': (1, 30),
         'extratreesclassifier__max_features': ['sqrt', 'log2'],
         'extratreesclassifier__bootstrap': [True, False]
     }
@@ -213,9 +213,9 @@ def predict(model, X,y, features):
     OUT_FILE = 'Assignment_4/resources/9.txt'
 
     with open(OUT_FILE, 'w') as f:
-        f.write(auc + linesep)
+        f.write(str(auc) + linesep)
         for prediction in predictions:
-            f.write(prediction + linesep)
+            f.write(str(prediction) + linesep)
 
 
 
