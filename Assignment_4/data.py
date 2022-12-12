@@ -78,8 +78,8 @@ def data_cleaning(df):
     # print(df)
     # print(df.info())
     # print(df.shape)
-    print(df.drop_duplicates().shape) # no duplicates
-    print(df.isnull().sum()) # no missing values
+    (df.drop_duplicates()) # no duplicates
+    (df.isnull()) # no missing values
 
     return df
 

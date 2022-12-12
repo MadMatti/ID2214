@@ -195,7 +195,7 @@ def upsampling(preprocessor, Xy):
     print("Best parameters:", grid_imba.best_params_)
     print("Best score:", grid_imba.best_score_)
 
-def predict(model, X,y, file, features):
+def predict(model, X,y, features):
     cv_test = StratifiedKFold(n_splits=5, shuffle=True, random_state=(R+1))
 
     auc = cross_val_score(model, X, y, cv=cv_test, scoring='roc_auc').mean()
@@ -237,14 +237,14 @@ if __name__ == "__main__":
     df_clean = data_cleaning(df_feat)
 
     '''Use this code to train'''
-    upsampling(transform(split(df_clean)), split(df_clean))
+    #upsampling(transform(split(df_clean)), split(df_clean))
 
     '''Use this code to test not to train'''
-    test_model(transform(split(df_clean)), split(df_clean))
+    #test_model(transform(split(df_clean)), split(df_clean))
 
     '''Use this code to predict'''
     eval_features = selection_prediction(test_file)
-    predict(modelling(), X=split(df_clean)[0], y=split(df_clean)[1], file=test_file, features=eval_features)
+    predict(modelling(transform(split(df_clean)), split(df_clean)), X=split(df_clean)[0], y=split(df_clean)[1], features=eval_features)
 
 
 
