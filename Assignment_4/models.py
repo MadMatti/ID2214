@@ -209,6 +209,8 @@ def predict(model, X,y, features):
     print(classification_report(y, y_pred))
 
     fpr, tpr, thresholds = roc_curve(y, y_pred)
+    print("fpr", fpr)
+    print("tpr", tpr)
     RocCurveDisplay(fpr=fpr, tpr=tpr).plot()
     plt.show()
 
