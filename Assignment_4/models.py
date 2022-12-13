@@ -11,7 +11,7 @@ from sklearn.preprocessing import OrdinalEncoder
 from sklearn.compose import ColumnTransformer
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import roc_auc_score, classification_report, roc_curve, RocCurveDisplay
+from sklearn.metrics import roc_auc_score, classification_report, roc_curve, RocCurveDisplay, auc
 from sklearn.utils import resample
 from sklearn.model_selection import RandomizedSearchCV, GridSearchCV
 from sklearn.model_selection import StratifiedKFold
@@ -193,7 +193,7 @@ def upsampling(preprocessor, Xy):
         'extratreesclassifier__bootstrap': [True, False]
     }
 
-    grid_imba = BayesSearchCV(imba_pipeline, search_spaces=params_b, cv=cv, scoring='roc_auc', verbose=3, n_jobs=-1, n_iter=100)
+    grid_imba = BayesSearchCV(imba_pipeline, search_spaces=params_b, cv=cv, scoring='roc_auc', verbose=3, n_jobs=-1, n_iter=50)
     grid_imba.fit(X, y)
 
     print("Best parameters:", grid_imba.best_params_)
@@ -202,16 +202,21 @@ def upsampling(preprocessor, Xy):
 def predict(model, X,y, features):
     cv_test = StratifiedKFold(n_splits=5, shuffle=True, random_state=(R+1))
 
-    auc = cross_val_score(model, X, y, cv=cv_test, scoring='roc_auc').mean()
-    print("AUC: ", auc)
+    AUC = cross_val_score(model, X, y, cv=cv_test, scoring='roc_auc').mean()
+    print("AUC: ", AUC)
 
-    y_pred = cross_val_predict(model, X, y, cv=cv_test, n_jobs=-1)
-    print(classification_report(y, y_pred))
-
-    fpr, tpr, thresholds = roc_curve(y, y_pred)
+    y_pred = cross_val_predict(model, X, y, cv=cv_test, n_jobs=-1, method='predict_proba')
+    print(y_pred)
+    #print(classification_report(y, y_pred))
+    # print(y.shape, y_pred.shape)
+    # print(y.shape, y_pred[:,-1].shape)
+    auc2 = roc_auc_score(y, y_pred[:,-1])
+    print("AUC2: ", auc2)
+    fpr, tpr, thresholds = roc_curve(y, y_pred[:,-1])
+    roc_auc = auc(fpr, tpr)
     print("fpr", fpr)
     print("tpr", tpr)
-    RocCurveDisplay(fpr=fpr, tpr=tpr).plot()
+    RocCurveDisplay(fpr=fpr, tpr=tpr, roc_auc=roc_auc).plot()
     plt.show()
 
 
