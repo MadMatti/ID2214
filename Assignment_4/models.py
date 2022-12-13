@@ -255,7 +255,7 @@ if __name__ == "__main__":
 
     '''Use this code to predict'''
     eval_features = selection_prediction(test_file)
-    predict(upsampling(transform(split(df_clean)), split(df_clean)), X=split(df_clean)[0], y=split(df_clean)[1], features=eval_features)
+    predict(modelling(transform(split(df_clean)), split(df_clean)), X=split(df_clean)[0], y=split(df_clean)[1], features=eval_features)
 
 
 
