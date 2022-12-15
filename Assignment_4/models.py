@@ -256,8 +256,8 @@ if __name__ == "__main__":
     #upsampling(transform(split(df_clean)), split(df_clean))
 
     '''Use this code to test not to train'''
-    auc, f1 = test_model(transform(split(df_clean)), split(df_clean))
-    auc2, f12 = test_model(transform(split(df_clean)), split(df_clean))
+    # auc, f1 = test_model(transform(split(df_clean)), split(df_clean))
+    # auc2, f12 = test_model(transform(split(df_clean)), split(df_clean))
 
     '''Use this code to predict'''
     eval_features = selection_prediction(test_file)
