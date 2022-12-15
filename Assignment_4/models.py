@@ -132,8 +132,8 @@ def modelling(preprocessor, Xy_train):
     extreme = Pipeline(steps=[('preprocessor', preprocessor),
                                 ('scaler', StandardScaler()),
                                 ('smote', SMOTE(n_jobs=-1)),
-                                ('extreme', ExtraTreesClassifier(n_estimators=1462, min_samples_split=14, min_samples_leaf=1, 
-                                                                 max_features='sqrt', max_depth=200, bootstrap=False, n_jobs=-1))]) # R
+                                ('extreme', ExtraTreesClassifier(n_estimators=1643, min_samples_split=5, min_samples_leaf=1, 
+                                                                     max_features='sqrt', max_depth=275, bootstrap=True, n_jobs=-1))]) # R
     
     extreme.fit(X_train, y_train)
     models["Extreme Random Forest"] = extreme
@@ -147,7 +147,7 @@ def test_model(preprocessor, Xy_test):
     extreme_auc = []
     extreme_f1 = []
 
-    for i in range(100):
+    for i in range(10):
         X_test, y_test = shuffle(X_test, y_test)
         cv = StratifiedKFold(n_splits=5, shuffle=True)
         print(i)
@@ -155,8 +155,8 @@ def test_model(preprocessor, Xy_test):
         extreme = Pipeline(steps=[('preprocessor', preprocessor),
                                     ('scaler', StandardScaler()),
                                     ('smote', SMOTE(n_jobs=-1)),
-                                    ('extreme', ExtraTreesClassifier(n_estimators=1462, min_samples_split=14, min_samples_leaf=1, 
-                                                                     max_features='sqrt', max_depth=200, bootstrap=False, n_jobs=-1))]) # R
+                                    ('extreme', ExtraTreesClassifier(n_estimators=1643, min_samples_split=5, min_samples_leaf=1, 
+                                                                     max_features='sqrt', max_depth=275, bootstrap=True, n_jobs=-1))]) # R
 
         score = (cross_val_score(extreme, X_test, y_test, cv=cv, scoring='roc_auc', n_jobs=-1))
         extreme_auc.append(score.mean())
@@ -171,7 +171,7 @@ def test_model(preprocessor, Xy_test):
     print("Extreme AUC:")
     print(np.mean(extreme_auc))
 
-    return extreme
+    return extreme_auc, extreme_f1
 
 
 def upsampling(preprocessor, Xy):
@@ -229,7 +229,7 @@ def predict(model, X,y, features):
     OUT_FILE = 'Assignment_4/resources/9.txt'
 
     with open(OUT_FILE, 'w') as f:
-        f.write(str(auc) + linesep)
+        f.write(str(AUC) + linesep)
         for prediction in predictions:
             f.write(str(prediction[1]) + linesep)
 
@@ -256,7 +256,8 @@ if __name__ == "__main__":
     #upsampling(transform(split(df_clean)), split(df_clean))
 
     '''Use this code to test not to train'''
-    #test_model(transform(split(df_clean)), split(df_clean))
+    auc, f1 = test_model(transform(split(df_clean)), split(df_clean))
+    auc2, f12 = test_model(transform(split(df_clean)), split(df_clean))
 
     '''Use this code to predict'''
     eval_features = selection_prediction(test_file)
